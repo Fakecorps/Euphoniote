@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.IO;
 
-public class ChartsLoader : MonoBehaviour
+public class ChartLoader : MonoBehaviour
 {
     public ChartData CurrentChart { get; private set; }
 

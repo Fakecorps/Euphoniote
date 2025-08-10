@@ -11,14 +11,14 @@
     },
     {
       "time": 3.0,
-      "requiredFrets": ["S"],
+      "requiredFrets": ["Q"],
       "strumType": "Down",
       "duration": 0.0,
       "isSpecial": false
     },
     {
       "time": 4.0,
-      "requiredFrets": ["A", "S"],
+      "requiredFrets": ["E", "S"],
       "strumType": "Up",
       "duration": 0.0,
       "isSpecial": true

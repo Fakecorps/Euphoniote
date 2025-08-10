@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public enum StrumType { Up, Down, HoldLeft, HoldRight }//右手枚举
-public enum FretKey { A, S, D, F, G }//左手枚举
+public enum FretKey { Q, W, E, A, S, D}//左手枚举
 
 [System.Serializable]
 public class NoteData

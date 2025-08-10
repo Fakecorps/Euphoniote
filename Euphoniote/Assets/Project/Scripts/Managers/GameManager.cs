@@ -15,7 +15,7 @@ public class GameManager : MonoBehaviour
     {
         // 游戏开始时的流程
         // 1. 加载谱面
-        chartLoader.LoadChart(testChartFileName);
+        chartLoader.LoadChart("Sample.json");
 
         // 2. 告诉NoteSpawner准备生成
         noteSpawner.StartSpawning();

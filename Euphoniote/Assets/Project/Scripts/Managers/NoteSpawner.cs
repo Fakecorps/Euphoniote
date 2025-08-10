@@ -18,10 +18,31 @@ public class NoteSpawner : MonoBehaviour
             Debug.LogError("谱面未加载，无法开始生成！");
             return;
         }
-        notesToSpawn = new List<NoteData>(chartLoader.CurrentChart.notes);
-        // 可以选择按时间排序一下，确保万无一失
-        notesToSpawn.Sort((a, b) => a.time.CompareTo(b.time));
-        nextNoteIndex = 0;
+        notesToSpawn = new List<NoteData>();
+        foreach (var originalNoteData in chartLoader.CurrentChart.notes)
+        {
+            // 创建一个全新的 NoteData 实例
+            NoteData newNoteData = new NoteData();
+
+            // 复制值类型字段
+            newNoteData.time = originalNoteData.time;
+            newNoteData.duration = originalNoteData.duration;
+            newNoteData.isSpecial = originalNoteData.isSpecial;
+            newNoteData.strumType = originalNoteData.strumType;
+
+            // 为引用类型字段 (List) 创建一个全新的实例并复制内容
+            if (originalNoteData.requiredFrets != null)
+            {
+                newNoteData.requiredFrets = new List<FretKey>(originalNoteData.requiredFrets);
+            }
+            else
+            {
+                newNoteData.requiredFrets = new List<FretKey>();
+            }
+
+            // 将这个完全独立的新对象添加到列表中
+            notesToSpawn.Add(newNoteData);
+        }
     }
 
     void Update()

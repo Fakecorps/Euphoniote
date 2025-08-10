@@ -1,142 +1,222 @@
-using System.Collections;
-using System.Collections.Generic;
+// _Project/Scripts/Managers/JudgmentManager.cs (修正版)
+
 using UnityEngine;
 using UnityEngine.InputSystem;
+using System.Collections.Generic;
+using System;
 
 public class JudgmentManager : MonoBehaviour
 {
+    #region Singleton
     public static JudgmentManager Instance { get; private set; }
+    #endregion
 
-    // 判定时间窗口 (单位：秒)
-    public float perfectWindow = 0.05f; // ±50ms
-    public float greatWindow = 0.1f;   // ±100ms
-    public float goodWindow = 0.15f;   // ±150ms
+    [Header("判定时间窗口 (秒)")]
+    public float perfectWindow = 0.05f;
+    public float greatWindow = 0.1f;
+    public float goodWindow = 0.15f;
 
-    // 存储场景中所有活动的音符
-    private static List<NoteController> activeNotes = new List<NoteController>();
+    public static event Action<JudgmentResult> OnNoteJudged;
 
+    private static List<BaseNoteController> activeNotes = new List<BaseNoteController>();
     private PlayerInputActions playerInput;
+    private HoldNoteController activeHoldNote = null;
 
+    #region Unity生命周期方法
     void Awake()
     {
         if (Instance == null) { Instance = this; }
         else { Destroy(gameObject); }
-
-        // 初始化输入系统
         playerInput = new PlayerInputActions();
     }
 
     void OnEnable()
     {
-        // 启用 Gameplay Action Map
         playerInput.Gameplay.Enable();
-
-        // 订阅右手按键的 "performed" 事件
-        playerInput.Gameplay.UpStrum.performed += ctx => CheckStrum(StrumType.Up);
-        playerInput.Gameplay.DownStrum.performed += ctx => CheckStrum(StrumType.Down);
-        // TODO: 为Hold音符添加 started 和 canceled 事件订阅
+        SubscribeToInputEvents();
     }
 
     void OnDisable()
     {
         playerInput.Gameplay.Disable();
-        // 取消订阅，防止内存泄漏
-        playerInput.Gameplay.UpStrum.performed -= ctx => CheckStrum(StrumType.Up);
-        playerInput.Gameplay.DownStrum.performed -= ctx => CheckStrum(StrumType.Down);
+        UnsubscribeFromInputEvents();
     }
 
-    // 核心判定函数
-    private void CheckStrum(StrumType strumType)
+    void Update()
     {
-        float songPosition = TimingManager.Instance.SongPosition;
-        NoteController noteToJudge = null;
-        float minTimeDiff = float.MaxValue;
+        if (activeHoldNote != null)
+        {
+            bool stillHoldingFrets = CheckFrets(activeHoldNote.noteData.requiredFrets);
+            bool stillHoldingStrum = (activeHoldNote.noteData.strumType == StrumType.HoldLeft)
+                                     ? playerInput.Gameplay.HoldLeft.IsPressed()
+                                     : playerInput.Gameplay.HoldRight.IsPressed();
 
-        // 1. 找到时间最接近的、类型匹配的音符
+            if (!stillHoldingFrets || !stillHoldingStrum)
+            {
+                BroadcastJudgment(JudgmentType.HoldBreak, activeHoldNote);
+                activeHoldNote = null;
+                return;
+            }
+
+            float endTime = activeHoldNote.noteData.time + activeHoldNote.noteData.duration;
+            if (TimingManager.Instance.SongPosition >= endTime)
+            {
+                BroadcastJudgment(JudgmentType.Perfect, activeHoldNote, true);
+                activeHoldNote = null;
+            }
+        }
+    }
+    #endregion
+
+    #region 事件订阅与处理 (这是主要修改部分)
+    private void SubscribeToInputEvents()
+    {
+        playerInput.Gameplay.UpStrum.performed += HandleUpStrum;
+        playerInput.Gameplay.DownStrum.performed += HandleDownStrum;
+        playerInput.Gameplay.HoldLeft.started += HandleHoldLeftStart;
+        playerInput.Gameplay.HoldRight.started += HandleHoldRightStart;
+        playerInput.Gameplay.HoldLeft.canceled += HandleHoldLeftEnd;
+        playerInput.Gameplay.HoldRight.canceled += HandleHoldRightEnd;
+    }
+
+    private void UnsubscribeFromInputEvents()
+    {
+        playerInput.Gameplay.UpStrum.performed -= HandleUpStrum;
+        playerInput.Gameplay.DownStrum.performed -= HandleDownStrum;
+        playerInput.Gameplay.HoldLeft.started -= HandleHoldLeftStart;
+        playerInput.Gameplay.HoldRight.started -= HandleHoldRightStart;
+        playerInput.Gameplay.HoldLeft.canceled -= HandleHoldLeftEnd;
+        playerInput.Gameplay.HoldRight.canceled -= HandleHoldRightEnd;
+    }
+
+    // 将匿名函数改为命名函数
+    private void HandleUpStrum(InputAction.CallbackContext context) => CheckTapNote(StrumType.Up);
+    private void HandleDownStrum(InputAction.CallbackContext context) => CheckTapNote(StrumType.Down);
+    private void HandleHoldLeftStart(InputAction.CallbackContext context) => CheckHoldStart(StrumType.HoldLeft);
+    private void HandleHoldRightStart(InputAction.CallbackContext context) => CheckHoldStart(StrumType.HoldRight);
+    private void HandleHoldLeftEnd(InputAction.CallbackContext context) => CheckHoldEnd(StrumType.HoldLeft);
+    private void HandleHoldRightEnd(InputAction.CallbackContext context) => CheckHoldEnd(StrumType.HoldRight);
+    #endregion
+
+    #region 判定逻辑 (这部分与你提供的代码一致，无需修改)
+    private void CheckTapNote(StrumType strumType)
+    {
+        BaseNoteController noteToJudge = FindClosestNote(strumType, false);
+        if (noteToJudge == null) return;
+
+        float timeDiff = Mathf.Abs(noteToJudge.noteData.time - TimingManager.Instance.SongPosition);
+        if (timeDiff > goodWindow) return;
+
+        if (!CheckFrets(noteToJudge.noteData.requiredFrets))
+        {
+            BroadcastJudgment(JudgmentType.Miss, noteToJudge);
+            return;
+        }
+
+        if (timeDiff <= perfectWindow) { BroadcastJudgment(JudgmentType.Perfect, noteToJudge); }
+        else if (timeDiff <= greatWindow) { BroadcastJudgment(JudgmentType.Great, noteToJudge); }
+        else if (timeDiff <= goodWindow) { BroadcastJudgment(JudgmentType.Good, noteToJudge); }
+    }
+
+    private void CheckHoldStart(StrumType strumType)
+    {
+        if (activeHoldNote != null) return;
+        BaseNoteController noteToJudge = FindClosestNote(strumType, true);
+        if (noteToJudge == null) return;
+
+        float timeDiff = Mathf.Abs(noteToJudge.noteData.time - TimingManager.Instance.SongPosition);
+        if (timeDiff > goodWindow) return;
+
+        if (!CheckFrets(noteToJudge.noteData.requiredFrets))
+        {
+            BroadcastJudgment(JudgmentType.Miss, noteToJudge);
+            return;
+        }
+
+        if (noteToJudge is HoldNoteController holdNote)
+        {
+            activeHoldNote = holdNote;
+            activeHoldNote.SetHeldState(true);
+
+            if (timeDiff <= perfectWindow) { BroadcastJudgment(JudgmentType.Perfect, holdNote, false); }
+            else if (timeDiff <= greatWindow) { BroadcastJudgment(JudgmentType.Great, holdNote, false); }
+            else if (timeDiff <= goodWindow) { BroadcastJudgment(JudgmentType.Good, holdNote, false); }
+        }
+    }
+
+    private void CheckHoldEnd(StrumType strumType) { }
+
+    public void ProcessMiss(BaseNoteController note)
+    {
+        if (note == null || !note.gameObject.activeSelf) return;
+        BroadcastJudgment(JudgmentType.Miss, note);
+    }
+    #endregion
+
+    #region 辅助方法 (这部分与你提供的代码一致，无需修改)
+    private BaseNoteController FindClosestNote(StrumType strumType, bool isHoldNote)
+    {
+        BaseNoteController closestNote = null;
+        float minTimeDiff = float.MaxValue;
         foreach (var note in activeNotes)
         {
-            if (note.noteData.strumType == strumType)
+            bool typeMatch = (isHoldNote) ? (note.noteData.duration > 0) : (note.noteData.duration == 0);
+            if (note.noteData.strumType == strumType && typeMatch)
             {
-                float timeDiff = Mathf.Abs(note.noteData.time - songPosition);
+                float timeDiff = Mathf.Abs(note.noteData.time - TimingManager.Instance.SongPosition);
                 if (timeDiff < minTimeDiff)
                 {
                     minTimeDiff = timeDiff;
-                    noteToJudge = note;
+                    closestNote = note;
                 }
             }
         }
-
-        // 如果没找到合适的音符，或者音符已经超出最大判定范围，则不处理
-        if (noteToJudge == null || minTimeDiff > goodWindow)
-        {
-            Debug.Log("Miss! (空挥)");
-            // 可以在这里加一个空挥的惩罚音效或效果
-            return;
-        }
-
-        // 2. 检查左手按键是否正确
-        bool fretsAreCorrect = CheckFrets(noteToJudge.noteData.requiredFrets);
-        if (!fretsAreCorrect)
-        {
-            Debug.Log("Miss! (左手按错了)");
-            // 把这个音符当作Miss处理掉
-            activeNotes.Remove(noteToJudge);
-            Destroy(noteToJudge.gameObject);
-            return;
-        }
-
-        // 3. 根据时间差进行判定
-        if (minTimeDiff <= perfectWindow) { Hit("Perfect", noteToJudge); }
-        else if (minTimeDiff <= greatWindow) { Hit("Great", noteToJudge); }
-        else if (minTimeDiff <= goodWindow) { Hit("Good", noteToJudge); }
+        return closestNote;
     }
 
     private bool CheckFrets(List<FretKey> requiredFrets)
     {
-        // 这个函数非常关键，需要检查 requiredFrets 里的每一个键是否都被按下了，
-        // 并且没有按下任何多余的键。
-
-        // 简单版本：只检查必需的是否按下
         foreach (var fret in requiredFrets)
         {
             switch (fret)
             {
-                case FretKey.A: if (!playerInput.Gameplay.FretA.IsPressed()) return false; break;
-                case FretKey.S: if (!playerInput.Gameplay.FretS.IsPressed()) return false; break;
-                case FretKey.D: if (!playerInput.Gameplay.FretD.IsPressed()) return false; break;
                 case FretKey.Q: if (!playerInput.Gameplay.FretQ.IsPressed()) return false; break;
                 case FretKey.W: if (!playerInput.Gameplay.FretW.IsPressed()) return false; break;
                 case FretKey.E: if (!playerInput.Gameplay.FretE.IsPressed()) return false; break;
+                case FretKey.A: if (!playerInput.Gameplay.FretA.IsPressed()) return false; break;
+                case FretKey.S: if (!playerInput.Gameplay.FretS.IsPressed()) return false; break;
+                case FretKey.D: if (!playerInput.Gameplay.FretD.IsPressed()) return false; break;
             }
         }
         return true;
-        // 进阶版本：还需要检查是否按了多余的键，可以增加代码来判断
     }
 
-    private void Hit(string judgment, NoteController note)
+    private void BroadcastJudgment(JudgmentType type, BaseNoteController note, bool destroyNote = true)
     {
-        Debug.Log(judgment + "!");
-        // TODO: 触发分数增加、连击增加、播放特效和音效
-
-        // 从活动列表中移除并销毁音符
-        activeNotes.Remove(note);
-        Destroy(note.gameObject);
+        if (note == null || !note.gameObject.activeSelf) return;
+        OnNoteJudged?.Invoke(new JudgmentResult { Type = type, IsSpecialNote = note.noteData.isSpecial });
+        if (destroyNote)
+        {
+            Destroy(note.gameObject);
+        }
     }
+    #endregion
 
-    // 这两个方法需要被外部调用
-    public static void RegisterNote(NoteController note)
+    #region 静态公共方法 (这部分与你提供的代码一致，无需修改)
+    public static void RegisterNote(BaseNoteController note)
     {
-        if (!activeNotes.Contains(note))
+        if (note != null && !activeNotes.Contains(note))
         {
             activeNotes.Add(note);
         }
     }
 
-    public static void UnregisterNote(NoteController note)
+    public static void UnregisterNote(BaseNoteController note)
     {
-        if (activeNotes.Contains(note))
+        if (note != null && activeNotes.Contains(note))
         {
             activeNotes.Remove(note);
         }
     }
+    #endregion
 }

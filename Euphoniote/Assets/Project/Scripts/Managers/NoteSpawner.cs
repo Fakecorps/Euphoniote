@@ -5,6 +5,8 @@ using UnityEngine;
 public class NoteSpawner : MonoBehaviour
 {
     public GameObject notePrefab; // 引用我们创建的Note Prefab
+    public GameObject holdNotePrefab; // HoldNote的Prefab
+
     public ChartLoader chartLoader;
 
     private List<NoteData> notesToSpawn;
@@ -58,12 +60,21 @@ public class NoteSpawner : MonoBehaviour
         if (songPosition >= notesToSpawn[nextNoteIndex].time - spawnAheadTime)
         {
             NoteData noteToSpawnData = notesToSpawn[nextNoteIndex];
-
+            GameObject noteObject = null;
+            BaseNoteController controller = null;
+            if (noteToSpawnData.duration > 0)
+            {
+                // 这是一个HoldNote
+                noteObject = Instantiate(holdNotePrefab, new Vector3(20, 0, 0), Quaternion.identity);
+                controller = noteObject.GetComponent<HoldNoteController>();
+            }
+            else
+            {
+                // 这是一个普通的TapNote
+                noteObject = Instantiate(notePrefab, new Vector3(20, 0, 0), Quaternion.identity);
+                controller = noteObject.GetComponent<NoteController>();
+            }
             // 实例化Prefab
-            GameObject noteObject = Instantiate(notePrefab, new Vector3(20, 0, 0), Quaternion.identity); // 先生成在屏幕外很远的地方
-
-            // 获取控制器并初始化
-            NoteController controller = noteObject.GetComponent<NoteController>();
             controller.Initialize(noteToSpawnData);
 
             // 准备生成下一个

@@ -3,65 +3,24 @@ using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 
-public class NoteController : MonoBehaviour
+public class NoteController : BaseNoteController
 {
-    public NoteData noteData; // 这个音符的数据
-    public TextMeshPro fretText;
-
-    // 这两个值需要从外部设置，或者从一个设置管理器获取
-    private float scrollSpeed = 5f; // 音符移动速度
-    private float judgmentLineX = -6f; // 判定线的X坐标
-    void OnEnable()
+    public override void Initialize(NoteData data)
     {
-        // 当音符被创建并激活时，向JudgmentManager注册自己
-        JudgmentManager.RegisterNote(this);
+        base.Initialize(data); // 调用父类的公共初始化
+        // TapNote没有长条，所以不需要做任何事
     }
 
-    void OnDisable()
+    // Update中处理飘过Miss的逻辑
+    protected override void Update()
     {
-        // 当音符被销毁或禁用时，从JudgmentManager注销自己
-        JudgmentManager.UnregisterNote(this);
-    }
-    public void Initialize(NoteData data)
-    {
-        noteData = data;
-        if (noteData.requiredFrets != null && noteData.requiredFrets.Count > 0)
-        {
-            string displayText = "";
-            for (int i = 0; i < noteData.requiredFrets.Count; i++)
-            {
-                Debug.Log(noteData.requiredFrets[i]);
-                displayText += noteData.requiredFrets[i].ToString();
-                // 如果不是最后一个字母，就在后面加上一个连接符，比如空格或加号
-                if (i < noteData.requiredFrets.Count - 1)
-                {
-                    displayText += " "; // 
-                }
-            }
-            fretText.text = displayText;
-        }
-        else
-        {
-            // 如果这个音符不需要按键（虽然不太可能，但做好防御性编程）
-            fretText.text = "";
-        }
-        // TODO: 在这里根据 noteData.strumType 和 isSpecial 改变箭头的Sprite和特效
-    }
+        base.Update(); // 调用父类的移动逻辑
 
-    void Update()
-    {
-        if (TimingManager.Instance == null) return;
-
-        float currentSongTime = TimingManager.Instance.SongPosition;
-        float targetX = judgmentLineX + (noteData.time - currentSongTime) * scrollSpeed;
-        transform.position = new Vector2(targetX, transform.position.y);
-
-        // 修改Miss判定的逻辑
-        if (noteData.time < currentSongTime - JudgmentManager.Instance.goodWindow)
+        // Miss判定
+        if (noteData.time < TimingManager.Instance.SongPosition - JudgmentManager.Instance.goodWindow)
         {
-            Debug.Log("Miss");
-            // TODO: 在这里通知ScoreManager连击断了
-            Destroy(gameObject); // OnDisable会自动调用UnregisterNote
+            // 注意：这里我们不直接销毁，而是通知JudgmentManager
+            JudgmentManager.Instance.ProcessMiss(this);
         }
     }
 }

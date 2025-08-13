@@ -167,6 +167,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   notePrefab: {fileID: 5239604770543967477, guid: 1eb2c20eebeda6a4eac2ba35c764e8f7, type: 3}
+  holdNotePrefab: {fileID: 7109684348863244956, guid: 55f450bb28f670b4c8431b2d934215b8, type: 3}
   chartLoader: {fileID: 777486533}
 --- !u!1 &519420028
 GameObject:

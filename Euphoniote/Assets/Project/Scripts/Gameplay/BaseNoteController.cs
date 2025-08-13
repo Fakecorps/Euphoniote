@@ -54,17 +54,21 @@ public abstract class BaseNoteController : MonoBehaviour
         // 3. 根据 requiredFrets 创建并排列字母 Sprite
         if (data.requiredFrets != null && data.requiredFrets.Count > 0)
         {
-            for (int i = 0; i < data.requiredFrets.Count; i++)
+            float spriteHeight = 2.2f;
+            int noteCount = data.requiredFrets.Count;
+
+            float totalHeight = noteCount * spriteHeight;
+ 
+            float startY = (totalHeight / 2f) - (spriteHeight / 2f);
+
+            for (int i = 0; i < noteCount; i++)
             {
                 GameObject fretObj = Instantiate(fretSpritePrefab, fretContainer);
                 SpriteRenderer fretRenderer = fretObj.GetComponent<SpriteRenderer>();
 
                 fretRenderer.sprite = spriteAtlas.GetFretSprite(data.requiredFrets[i]);
-                // 在这里添加逻辑来排列它们的位置，比如水平居中排列
-                // 假设每个字母Sprite宽度为0.5f
-                float totalWidth = data.requiredFrets.Count * 0.5f;
-                float startX = -(totalWidth / 2f) + 0.25f;
-                fretObj.transform.localPosition = new Vector3(startX + i * 0.5f, 0, 0);
+
+                fretObj.transform.localPosition = new Vector3(0, startY - i * spriteHeight, 0);
             }
         }
     }

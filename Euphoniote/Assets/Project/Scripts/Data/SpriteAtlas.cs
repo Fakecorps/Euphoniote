@@ -24,13 +24,8 @@ public class SpriteAtlas : ScriptableObject
     private Dictionary<FretKey, Sprite> fretDict;
     private Dictionary<StrumType, Sprite> holdNoteDict;
 
-    /// <summary>
-    /// 将 Inspector 中配置的列表转换为字典，以提高运行时查找效率。
-    /// </summary>
     public void Initialize()
     {
-        // 使用 if (strumDict != null) return; 来防止重复初始化
-        // 如果你的游戏流程中有可能多次调用，可以加上这个判断
 
         strumDict = new Dictionary<StrumType, Sprite>();
         // 使用 Mathf.Min 来防止列表长度不匹配导致的越界错误

@@ -1,4 +1,4 @@
-// _Project/Scripts/Managers/JudgmentManager.cs (修正版)
+// _Project/Scripts/Managers/JudgmentManager.cs (完整最终版)
 
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -7,6 +7,7 @@ using System;
 
 public class JudgmentManager : MonoBehaviour
 {
+    // ... (Singleton, 变量, Awake, OnEnable/Disable, Update, 事件订阅等部分代码与你之前版本一致，无需修改) ...
     #region Singleton
     public static JudgmentManager Instance { get; private set; }
     #endregion
@@ -46,29 +47,50 @@ public class JudgmentManager : MonoBehaviour
     {
         if (activeHoldNote != null)
         {
-            bool stillHoldingFrets = CheckFrets(activeHoldNote.noteData.requiredFrets);
-            bool stillHoldingStrum = (activeHoldNote.noteData.strumType == StrumType.HoldLeft)
-                                     ? playerInput.Gameplay.HoldLeft.IsPressed()
-                                     : playerInput.Gameplay.HoldRight.IsPressed();
-
-            if (!stillHoldingFrets || !stillHoldingStrum)
+            // 首先，检查音符对象是否还存在。如果因为其他原因（如ProcessMiss）被销毁，应立即清空引用。
+            if (activeHoldNote.gameObject == null || !activeHoldNote.gameObject.activeInHierarchy)
             {
-                BroadcastJudgment(JudgmentType.HoldBreak, activeHoldNote);
                 activeHoldNote = null;
                 return;
             }
 
-            float endTime = activeHoldNote.noteData.time + activeHoldNote.noteData.duration;
-            if (TimingManager.Instance.SongPosition >= endTime)
+            // 获取音符的标准结束时间
+            float noteEndTime = activeHoldNote.noteData.time + activeHoldNote.noteData.duration;
+            float songPosition = TimingManager.Instance.SongPosition;
+
+            // 【核心改动】检查是否成功
+            // 如果当前歌曲时间已经超过了音符的结束时间，那么就判定为成功。
+            if (songPosition >= noteEndTime)
             {
+                // 判定为Perfect（或你希望的任何成功判定），并销毁音符
                 BroadcastJudgment(JudgmentType.Perfect, activeHoldNote, true);
+
+                // 清空引用，判定流程结束
                 activeHoldNote = null;
+                return; // 成功后立刻返回，不再执行后续的HoldBreak检查
+            }
+
+            // 如果还没到结束时间，再检查玩家是否中途松手 (HoldBreak)
+            bool stillHoldingFrets = CheckFrets(activeHoldNote.noteData.requiredFrets);
+            bool stillHoldingStrum = (activeHoldNote.noteData.strumType == StrumType.HoldLeft)
+                                        ? playerInput.Gameplay.HoldLeft.IsPressed()
+                                        : playerInput.Gameplay.HoldRight.IsPressed();
+
+            if (!stillHoldingFrets || !stillHoldingStrum)
+            {
+                // 玩家在音符结束前松手了，判定为 HoldBreak
+                BroadcastJudgment(JudgmentType.HoldBreak, activeHoldNote, false); // HoldBreak不直接销毁
+                activeHoldNote.SetHeldState(false); // 通知音符它不再被按住
+
+                // 清空引用，判定流程结束
+                activeHoldNote = null;
+                return;
             }
         }
     }
     #endregion
 
-    #region 事件订阅与处理 (这是主要修改部分)
+    #region 事件订阅与处理
     private void SubscribeToInputEvents()
     {
         playerInput.Gameplay.UpStrum.performed += HandleUpStrum;
@@ -89,7 +111,6 @@ public class JudgmentManager : MonoBehaviour
         playerInput.Gameplay.HoldRight.canceled -= HandleHoldRightEnd;
     }
 
-    // 将匿名函数改为命名函数
     private void HandleUpStrum(InputAction.CallbackContext context) => CheckTapNote(StrumType.Up);
     private void HandleDownStrum(InputAction.CallbackContext context) => CheckTapNote(StrumType.Down);
     private void HandleHoldLeftStart(InputAction.CallbackContext context) => CheckHoldStart(StrumType.HoldLeft);
@@ -98,7 +119,7 @@ public class JudgmentManager : MonoBehaviour
     private void HandleHoldRightEnd(InputAction.CallbackContext context) => CheckHoldEnd(StrumType.HoldRight);
     #endregion
 
-    #region 判定逻辑 (这部分与你提供的代码一致，无需修改)
+    #region 判定逻辑
     private void CheckTapNote(StrumType strumType)
     {
         BaseNoteController noteToJudge = FindClosestNote(strumType, false);
@@ -113,9 +134,9 @@ public class JudgmentManager : MonoBehaviour
             return;
         }
 
-        if (timeDiff <= perfectWindow) { BroadcastJudgment(JudgmentType.Perfect, noteToJudge); }
-        else if (timeDiff <= greatWindow) { BroadcastJudgment(JudgmentType.Great, noteToJudge); }
-        else if (timeDiff <= goodWindow) { BroadcastJudgment(JudgmentType.Good, noteToJudge); }
+        if (timeDiff <= perfectWindow) { BroadcastJudgment(JudgmentType.Perfect, noteToJudge, false); }
+        else if (timeDiff <= greatWindow) { BroadcastJudgment(JudgmentType.Great, noteToJudge, false); }
+        else if (timeDiff <= goodWindow) { BroadcastJudgment(JudgmentType.Good, noteToJudge, false); }
     }
 
     private void CheckHoldStart(StrumType strumType)
@@ -148,18 +169,20 @@ public class JudgmentManager : MonoBehaviour
 
     public void ProcessMiss(BaseNoteController note)
     {
-        if (note == null || !note.gameObject.activeSelf) return;
-        BroadcastJudgment(JudgmentType.Miss, note);
+        if (note == null || !note.gameObject.activeSelf || note.IsJudged) return;
+        BroadcastJudgment(JudgmentType.Miss, note, false);
     }
     #endregion
 
-    #region 辅助方法 (这部分与你提供的代码一致，无需修改)
+    #region 辅助方法
     private BaseNoteController FindClosestNote(StrumType strumType, bool isHoldNote)
     {
         BaseNoteController closestNote = null;
         float minTimeDiff = float.MaxValue;
         foreach (var note in activeNotes)
         {
+            if (note.IsJudged) continue;
+
             bool typeMatch = (isHoldNote) ? (note.noteData.duration > 0) : (note.noteData.duration == 0);
             if (note.noteData.strumType == strumType && typeMatch)
             {
@@ -176,6 +199,7 @@ public class JudgmentManager : MonoBehaviour
 
     private bool CheckFrets(List<FretKey> requiredFrets)
     {
+        // ... (这部分代码无需修改)
         foreach (var fret in requiredFrets)
         {
             switch (fret)
@@ -191,10 +215,13 @@ public class JudgmentManager : MonoBehaviour
         return true;
     }
 
-    private void BroadcastJudgment(JudgmentType type, BaseNoteController note, bool destroyNote = true)
+    private void BroadcastJudgment(JudgmentType type, BaseNoteController note, bool destroyNote = false)
     {
-        if (note == null || !note.gameObject.activeSelf) return;
+        if (note == null || !note.gameObject.activeSelf || note.IsJudged) return;
+        note.SetJudged();
+
         OnNoteJudged?.Invoke(new JudgmentResult { Type = type, IsSpecialNote = note.noteData.isSpecial });
+
         if (destroyNote)
         {
             Destroy(note.gameObject);
@@ -202,7 +229,7 @@ public class JudgmentManager : MonoBehaviour
     }
     #endregion
 
-    #region 静态公共方法 (这部分与你提供的代码一致，无需修改)
+    #region 静态公共方法
     public static void RegisterNote(BaseNoteController note)
     {
         if (note != null && !activeNotes.Contains(note))

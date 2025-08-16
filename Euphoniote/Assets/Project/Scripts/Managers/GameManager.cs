@@ -11,16 +11,21 @@ public class GameManager : MonoBehaviour
     public AudioClip testSong; // 拖入一首测试音乐
     public string testChartFileName = "Sample.json";
 
+    public StatsManager statsManager;
+    public JudgmentManager judgmentManager;
+
     void Start()
     {
-        // 游戏开始时的流程
-        // 1. 加载谱面
-        chartLoader.LoadChart("Sample.json");
+        statsManager.Initialize(); // 假设你已在GameManager中引用了StatsManager
 
-        // 2. 告诉NoteSpawner准备生成
+        // 2. 判定系统后准备，这样它广播事件时，数值系统肯定已经在监听了
+        judgmentManager.Initialize(); // 假设你已在GameManager中引用了JudgmentManager
+
+        // 3. 开始游戏流程
+        chartLoader.LoadChart(testChartFileName);
         noteSpawner.StartSpawning();
 
-        // 3. 播放音乐
-        timingManager.PlaySong(testSong);
+        float bpm = chartLoader.CurrentChart.bpm;
+        timingManager.PlaySong(testSong, bpm);
     }
 }

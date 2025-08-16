@@ -36,6 +36,34 @@
       "strumType": "HoldRight",
       "duration": 5.0,
       "isSpecial": false
-    }
+    },
+    {
+      "time": 18.0,
+      "requiredFrets": ["Q","W","E"],
+      "strumType": "Up",
+      "duration": 0.0,
+      "isSpecial": false
+    },
+    {
+      "time": 19.0,
+      "requiredFrets": ["Q","W","E"],
+      "strumType": "Up",
+      "duration": 0.0,
+      "isSpecial": false
+    },
+    {
+      "time": 20.0,
+      "requiredFrets": ["Q","W","E"],
+      "strumType": "Down",
+      "duration": 0.0,
+      "isSpecial": false
+    },
+   {
+      "time": 21.0,
+      "requiredFrets": ["Q","W","E"],
+      "strumType": "Up",
+      "duration": 0.0,
+      "isSpecial": false
+    },
   ]
 }

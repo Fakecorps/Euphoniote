@@ -1,4 +1,4 @@
-// _Project/Scripts/Gameplay/BaseNoteController.cs (完整最终版)
+// _Project/Scripts/Gameplay/BaseNoteController.cs (精简版)
 
 using UnityEngine;
 using System.Collections.Generic;
@@ -13,13 +13,19 @@ public abstract class BaseNoteController : MonoBehaviour
     [Header("配置")]
     public GameObject fretSpritePrefab;
 
-    public bool IsJudged { get; private set; } = false; // 新增状态，默认为false
+    public bool IsJudged { get; private set; } = false;
 
-    // 公共的配置
-    protected float scrollSpeed = 5f;
-    protected float judgmentLineX = -6f;
+    // 统一由NoteSpawner传入
+    protected float scrollSpeed;
+    protected float judgmentLineX;
 
     protected static SpriteAtlas spriteAtlas;
+
+    public void Setup(float speed, float lineX)
+    {
+        this.scrollSpeed = speed;
+        this.judgmentLineX = lineX;
+    }
 
     public virtual void Initialize(NoteData data)
     {
@@ -32,48 +38,25 @@ public abstract class BaseNoteController : MonoBehaviour
 
         this.noteData = data;
 
+        // 只负责设置箭头
         arrowSprite.sprite = spriteAtlas.GetStrumSprite(data.strumType);
 
-        foreach (Transform child in fretContainer) { Destroy(child.gameObject); }
-
-        if (data.requiredFrets != null && data.requiredFrets.Count > 0)
+        // 清理旧的字母 (这一步依然保留，很重要)
+        foreach (Transform child in fretContainer)
         {
-            float spriteHeight = 2.2f;
-            int noteCount = data.requiredFrets.Count;
-            float totalHeight = noteCount * spriteHeight;
-            float startY = (totalHeight / 2f) - (spriteHeight / 2f);
-
-            for (int i = 0; i < noteCount; i++)
-            {
-                GameObject fretObj = Instantiate(fretSpritePrefab, fretContainer);
-                SpriteRenderer fretRenderer = fretObj.GetComponent<SpriteRenderer>();
-                fretRenderer.sprite = spriteAtlas.GetFretSprite(data.requiredFrets[i]);
-                fretObj.transform.localPosition = new Vector3(0, startY - i * spriteHeight, 0);
-            }
+            Destroy(child.gameObject);
         }
+
+        // 【重要】字母排列的逻辑已经被移除，将由子类自己实现
     }
 
-    /// <summary>
-    /// 提供一个公共方法来将音符标记为已判定。
-    /// </summary>
-    public void SetJudged()
-    {
-        IsJudged = true;
-    }
+    public void SetJudged() { IsJudged = true; }
 
-    protected virtual void OnEnable()
-    {
-        JudgmentManager.RegisterNote(this);
-    }
-
-    protected virtual void OnDisable()
-    {
-        JudgmentManager.UnregisterNote(this);
-    }
+    protected virtual void OnEnable() { JudgmentManager.RegisterNote(this); }
+    protected virtual void OnDisable() { JudgmentManager.UnregisterNote(this); }
 
     protected virtual void Update()
     {
-        // 仅当音符未被判定时才移动
         if (!IsJudged && TimingManager.Instance != null)
         {
             float currentSongTime = TimingManager.Instance.SongPosition;

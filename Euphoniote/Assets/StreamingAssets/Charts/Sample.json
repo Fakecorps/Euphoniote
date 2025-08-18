@@ -1,69 +1,155 @@
 {
   "songName": "Test Track",
-  "bpm": 120.0,
+  "bpm": 80.0,
+  "offset": 2.6,
+  "ticksPerBeat": 4,
   "notes": [
     {
-      "time": 2.0,
-      "requiredFrets": ["A"],
-      "strumType": "Up",
-      "duration": 0.0,
+      "beat": 1, "subdivision": 0, 
+      "length": 0,
+      "requiredFrets": ["A"], 
+      "strumType": "Up", 
       "isSpecial": false
     },
     {
-      "time": 3.0,
-      "requiredFrets": ["Q"],
-      "strumType": "Down",
-      "duration": 0.0,
+      "beat": 2, "subdivision": 0, 
+      "length": 0,
+      "requiredFrets": ["A"], 
+      "strumType": "Up", 
       "isSpecial": false
     },
     {
-      "time": 4.0,
-      "requiredFrets": ["E", "S"],
-      "strumType": "Up",
-      "duration": 0.0,
+      "beat": 2, "subdivision": 2, 
+      "length": 0,
+      "requiredFrets": ["A"], 
+      "strumType": "Down", 
       "isSpecial": true
     },
     {
-      "time": 5.0,
-      "requiredFrets": ["E"],
-      "strumType": "HoldLeft",
-      "duration": 5.0,
+      "beat": 3, "subdivision": 0, 
+      "length": 0,
+      "requiredFrets": ["A"], 
+      "strumType": "Up", 
       "isSpecial": false
     },
     {
-      "time": 12.0,
-      "requiredFrets": ["A","W"],
-      "strumType": "HoldRight",
-      "duration": 5.0,
+      "beat": 4, "subdivision": 0, 
+      "length": 0,
+      "requiredFrets": ["W"], 
+      "strumType": "Up", 
       "isSpecial": false
     },
     {
-      "time": 18.0,
-      "requiredFrets": ["Q","W","E"],
-      "strumType": "Up",
-      "duration": 0.0,
+      "beat": 4, "subdivision": 2, 
+      "length": 0,
+      "requiredFrets": ["W"], 
+      "strumType": "Down", 
+      "isSpecial": false
+    }, 
+    {
+      "beat": 5, "subdivision": 0, 
+      "length": 0,
+      "requiredFrets": ["W"], 
+      "strumType": "Up", 
+      "isSpecial": false
+    }, 
+    {
+      "beat": 6, "subdivision": 0, 
+      "length": 0,
+      "requiredFrets": ["S"], 
+      "strumType": "Up", 
       "isSpecial": false
     },
     {
-      "time": 19.0,
-      "requiredFrets": ["Q","W","E"],
-      "strumType": "Up",
-      "duration": 0.0,
+      "beat": 6, "subdivision": 2, 
+      "length": 0,
+      "requiredFrets": ["S"], 
+      "strumType": "Down", 
       "isSpecial": false
     },
     {
-      "time": 20.0,
-      "requiredFrets": ["Q","W","E"],
-      "strumType": "Down",
-      "duration": 0.0,
+      "beat": 7, "subdivision": 0, 
+      "length": 0,
+      "requiredFrets": ["S"], 
+      "strumType": "Up", 
       "isSpecial": false
     },
-   {
-      "time": 21.0,
-      "requiredFrets": ["Q","W","E"],
-      "strumType": "Up",
-      "duration": 0.0,
+    {
+      "beat": 8, "subdivision": 0, 
+      "length": 4,
+      "requiredFrets": ["S"], 
+      "strumType": "HoldLeft", 
       "isSpecial": false
     },
+    {
+      "beat": 12, "subdivision": 2, 
+      "length": 4,
+      "requiredFrets": ["A","S"], 
+      "strumType": "HoldRight", 
+      "isSpecial": false
+    },
+    {
+      "beat": 17, "subdivision": 0, 
+      "length": 0,
+      "requiredFrets": ["Q","W","E"], 
+      "strumType": "Up", 
+      "isSpecial": false
+    },
+    {
+      "beat": 17, "subdivision": 2, 
+      "length": 0,
+      "requiredFrets": ["Q","W","E"], 
+      "strumType": "Up", 
+      "isSpecial": false
+    },
+    {
+      "beat": 18, "subdivision": 0, 
+      "length": 0,
+      "requiredFrets": ["Q","W","E"], 
+      "strumType": "Up", 
+      "isSpecial": false
+    },
+    {
+      "beat": 18, "subdivision": 2, 
+      "length": 0,
+      "requiredFrets": ["Q","W","E"], 
+      "strumType": "Down", 
+      "isSpecial": false
+    },
+    {
+      "beat": 18, "subdivision": 3, 
+      "length": 0,
+      "requiredFrets": ["Q","W","E"], 
+      "strumType": "Up", 
+      "isSpecial": false
+    },
+    {
+      "beat": 19, "subdivision": 0, 
+      "length": 0,
+      "requiredFrets": ["Q","W","E"], 
+      "strumType": "Up", 
+      "isSpecial": false
+    },
+    {
+      "beat": 19, "subdivision": 1, 
+      "length": 0,
+      "requiredFrets": ["Q","W","E"], 
+      "strumType": "Down", 
+      "isSpecial": false
+    },
+    {
+      "beat": 19, "subdivision": 2, 
+      "length": 0,
+      "requiredFrets": ["Q","W","E"], 
+      "strumType": "Up", 
+      "isSpecial": false
+    },
+    {
+      "beat": 19, "subdivision": 3, 
+      "length": 0,
+      "requiredFrets": ["Q","W","E"], 
+      "strumType": "Down", 
+      "isSpecial": false
+    }
   ]
 }

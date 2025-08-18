@@ -18,7 +18,7 @@ public class HoldNoteController : BaseNoteController
 
         if (data.requiredFrets != null && data.requiredFrets.Count > 0)
         {
-            float spriteWidth = 0.5f;
+            float spriteWidth = 2.1f;
             int noteCount = data.requiredFrets.Count;
             float totalWidth = noteCount * spriteWidth;
             float startX = -(totalWidth / 2f) + (spriteWidth / 2f);
@@ -38,7 +38,14 @@ public class HoldNoteController : BaseNoteController
             if (holdTrailRenderer.drawMode != SpriteDrawMode.Sliced) { Debug.LogWarning("Draw Mode不是Sliced！", this.gameObject); }
             float trailWidth = data.duration * scrollSpeed;
             holdTrailRenderer.size = new Vector2(trailWidth, holdTrailRenderer.size.y);
-            holdTrailRenderer.transform.localPosition = new Vector3(trailWidth / 2f, 0, 0);
+            
+            float arrowVisualWidth = arrowSprite.bounds.size.x;
+
+            holdTrailRenderer.size = new Vector2(trailWidth, holdTrailRenderer.size.y);
+
+            float offset = (arrowVisualWidth / 2f) + (trailWidth / 2f);
+
+            holdTrailRenderer.transform.localPosition = new Vector3(offset, 0, 0);
         }
         else { Debug.LogError("holdTrailRenderer 引用为空！", this.gameObject); }
     }
@@ -83,9 +90,5 @@ public class HoldNoteController : BaseNoteController
     public void SetHeldState(bool held)
     {
         isBeingHeld = held;
-        if (isBeingHeld)
-        {
-            SetJudged();
-        }
     }
 }

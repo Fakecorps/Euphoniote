@@ -43,7 +43,7 @@ public class StatsManager : MonoBehaviour
         CurrentCombo = 0;
         MaxCombo = 0;
         // 订阅事件
-        JudgmentManager.OnNoteJudged += HandleJudgment;
+        //JudgmentManager.OnNoteJudged += HandleJudgment;
         Debug.Log("StatsManager Initialized and Subscribed.");
     }
 
@@ -75,7 +75,7 @@ public class StatsManager : MonoBehaviour
         OnComboChanged?.Invoke(CurrentCombo);
     }
 
-    private void BreakCombo()
+    public void BreakCombo()
     {
         Debug.Log("Combo Broken");
         // 只有在有combo的时候断连才需要广播事件

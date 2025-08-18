@@ -16,10 +16,12 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
-        statsManager.Initialize(); // 假设你已在GameManager中引用了StatsManager
+        // 1. 确保监听者(StatsManager, UIManager等)先初始化并订阅事件
+        if (statsManager != null) statsManager.Initialize();
+        // if (uiManager != null) uiManager.Initialize();
 
-        // 2. 判定系统后准备，这样它广播事件时，数值系统肯定已经在监听了
-        judgmentManager.Initialize(); // 假设你已在GameManager中引用了JudgmentManager
+        // 2. 确保事件广播者(JudgmentManager)后初始化
+        if (judgmentManager != null) judgmentManager.Initialize();
 
         // 3. 开始游戏流程
         chartLoader.LoadChart(testChartFileName);

@@ -81,8 +81,6 @@ public class UIManager : MonoBehaviour
     {
         if (comboText == null) return;
 
-        // 【核心修改】
-        // 中断时，立即隐藏文本，并确保动画停止且缩放复位。
         if (comboAnimationCoroutine != null)
         {
             StopCoroutine(comboAnimationCoroutine);

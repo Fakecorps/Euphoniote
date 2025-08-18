@@ -97,11 +97,12 @@ public class JudgmentManager : MonoBehaviour
 
             if (!stillHoldingFrets || !stillHoldingStrum)
             {
+                StatsManager.Instance.BreakCombo();
                 OnHoldNoteDebug?.Invoke(new HoldDebugInfo { Stage = "Break" });
                 BroadcastJudgment(JudgmentType.HoldBreak, activeHoldNote, false);
                 activeHoldNote.SetHeldState(false);
                 activeHoldNote = null;
-                return; // 中断后立即返回
+                return; 
             }
 
             // 2. 如果没有中断，再检查是否成功

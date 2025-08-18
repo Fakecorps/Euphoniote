@@ -47,7 +47,8 @@ public abstract class BaseNoteController : MonoBehaviour
             Destroy(child.gameObject);
         }
 
-        // 【重要】字母排列的逻辑已经被移除，将由子类自己实现
+        
+
     }
 
     public void SetJudged() { IsJudged = true; }

@@ -229,6 +229,10 @@ public class JudgmentManager : MonoBehaviour
     {
         foreach (var fret in requiredFrets)
         {
+            if (requiredFrets == null || requiredFrets.Count == 0)
+            {
+                return true; // 直接判定左手条件成功
+            }
             switch (fret)
             {
                 case FretKey.Q: if (!playerInput.Gameplay.FretQ.IsPressed()) return false; break;

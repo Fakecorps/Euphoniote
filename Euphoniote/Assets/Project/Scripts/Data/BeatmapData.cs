@@ -18,7 +18,8 @@ public class BeatNoteData
 {
     public int beat;
     public int subdivision;
-    public float length;
+    public int endBeat;
+    public int endSubdivision;
 
     public List<FretKey> requiredFrets;
     public StrumType strumType;

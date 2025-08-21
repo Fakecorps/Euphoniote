@@ -5,151 +5,104 @@
   "ticksPerBeat": 4,
   "notes": [
     {
-      "beat": 1, "subdivision": 0, 
-      "length": 0,
-      "requiredFrets": ["A"], 
-      "strumType": "Up", 
-      "isSpecial": false
+      "beat": 1, "subdivision": 0, "endBeat": 0, "endSubdivision": 0,
+      "requiredFrets": ["A"], "strumType": "Up", "isSpecial": false
     },
     {
-      "beat": 2, "subdivision": 0, 
-      "length": 0,
-      "requiredFrets": ["A"], 
-      "strumType": "Up", 
-      "isSpecial": false
+      "beat": 2, "subdivision": 0, "endBeat": 0, "endSubdivision": 0,
+      "requiredFrets": ["A"], "strumType": "Up", "isSpecial": false
     },
     {
-      "beat": 2, "subdivision": 2, 
-      "length": 0,
-      "requiredFrets": ["A"], 
-      "strumType": "Down", 
-      "isSpecial": true
+      "beat": 2, "subdivision": 2, "endBeat": 0, "endSubdivision": 0,
+      "requiredFrets": ["A"], "strumType": "Down", "isSpecial": true
     },
     {
-      "beat": 3, "subdivision": 0, 
-      "length": 0,
-      "requiredFrets": ["A"], 
-      "strumType": "Up", 
-      "isSpecial": false
+      "beat": 3, "subdivision": 0, "endBeat": 0, "endSubdivision": 0,
+      "requiredFrets": ["A"], "strumType": "Up", "isSpecial": false
     },
     {
-      "beat": 4, "subdivision": 0, 
-      "length": 0,
-      "requiredFrets": ["W"], 
-      "strumType": "Up", 
-      "isSpecial": false
+      "beat": 4, "subdivision": 0, "endBeat": 0, "endSubdivision": 0,
+      "requiredFrets": ["W"], "strumType": "Up", "isSpecial": false
     },
     {
-      "beat": 4, "subdivision": 2, 
-      "length": 0,
-      "requiredFrets": ["W"], 
-      "strumType": "Down", 
-      "isSpecial": false
+      "beat": 4, "subdivision": 2, "endBeat": 0, "endSubdivision": 0,
+      "requiredFrets": ["W"], "strumType": "Down", "isSpecial": false
     }, 
     {
-      "beat": 5, "subdivision": 0, 
-      "length": 0,
-      "requiredFrets": ["W"], 
-      "strumType": "Up", 
-      "isSpecial": false
+      "beat": 5, "subdivision": 0, "endBeat": 0, "endSubdivision": 0,
+      "requiredFrets": ["W"], "strumType": "Up", "isSpecial": false
     }, 
     {
-      "beat": 6, "subdivision": 0, 
-      "length": 0,
-      "requiredFrets": ["S"], 
-      "strumType": "Up", 
-      "isSpecial": false
+      "beat": 6, "subdivision": 0, "endBeat": 0, "endSubdivision": 0,
+      "requiredFrets": ["S"], "strumType": "Up", "isSpecial": false
     },
     {
-      "beat": 6, "subdivision": 2, 
-      "length": 0,
-      "requiredFrets": ["S"], 
-      "strumType": "Down", 
-      "isSpecial": false
+      "beat": 6, "subdivision": 2, "endBeat": 0, "endSubdivision": 0,
+      "requiredFrets": ["S"], "strumType": "Down", "isSpecial": false
     },
     {
-      "beat": 7, "subdivision": 0, 
-      "length": 0,
-      "requiredFrets": ["S"], 
-      "strumType": "Up", 
-      "isSpecial": false
+      "beat": 7, "subdivision": 0, "endBeat": 0, "endSubdivision": 0,
+      "requiredFrets": ["S"], "strumType": "Up", "isSpecial": false
     },
     {
-      "beat": 8, "subdivision": 0, 
-      "length": 4,
-      "requiredFrets": ["S"], 
-      "strumType": "HoldLeft", 
-      "isSpecial": false
+      "beat": 8, "subdivision": 0, "endBeat": 12, "endSubdivision": 0,
+      "requiredFrets": ["S"], "strumType": "HoldLeft", "isSpecial": false
     },
     {
-      "beat": 12, "subdivision": 2, 
-      "length": 4,
-      "requiredFrets": ["A","S"], 
-      "strumType": "HoldRight", 
-      "isSpecial": false
+      "beat": 12, "subdivision": 2, "endBeat": 16, "endSubdivision": 2,
+      "requiredFrets": ["A","S"], "strumType": "HoldRight", "isSpecial": false
     },
     {
-      "beat": 17, "subdivision": 0, 
-      "length": 0,
-      "requiredFrets": ["Q","W","E"], 
-      "strumType": "Up", 
-      "isSpecial": false
+      "beat": 17, "subdivision": 0, "endBeat": 0, "endSubdivision": 0,
+      "requiredFrets": ["Q","W","E"], "strumType": "Up", "isSpecial": false
     },
     {
-      "beat": 17, "subdivision": 2, 
-      "length": 0,
-      "requiredFrets": ["Q","W","E"], 
-      "strumType": "Up", 
-      "isSpecial": false
+      "beat": 17, "subdivision": 2, "endBeat": 0, "endSubdivision": 0,
+      "requiredFrets": ["Q","W","E"], "strumType": "Up", "isSpecial": false
     },
     {
-      "beat": 18, "subdivision": 0, 
-      "length": 0,
-      "requiredFrets": ["Q","W","E"], 
-      "strumType": "Up", 
-      "isSpecial": false
+      "beat": 18, "subdivision": 0, "endBeat": 0, "endSubdivision": 0,
+      "requiredFrets": ["Q","W","E"], "strumType": "Up", "isSpecial": false
     },
     {
-      "beat": 18, "subdivision": 2, 
-      "length": 0,
-      "requiredFrets": ["Q","W","E"], 
-      "strumType": "Down", 
-      "isSpecial": false
+      "beat": 18, "subdivision": 2, "endBeat": 0, "endSubdivision": 0,
+      "requiredFrets": ["Q","W","E"], "strumType": "Down", "isSpecial": false
     },
     {
-      "beat": 18, "subdivision": 3, 
-      "length": 0,
-      "requiredFrets": ["Q","W","E"], 
-      "strumType": "Up", 
-      "isSpecial": false
+      "beat": 18, "subdivision": 3, "endBeat": 0, "endSubdivision": 0,
+      "requiredFrets": ["Q","W","E"], "strumType": "Up", "isSpecial": false
     },
     {
-      "beat": 19, "subdivision": 0, 
-      "length": 0,
-      "requiredFrets": ["Q","W","E"], 
-      "strumType": "Up", 
-      "isSpecial": false
+      "beat": 19, "subdivision": 0, "endBeat": 0, "endSubdivision": 0,
+      "requiredFrets": ["Q","W","E"], "strumType": "Up", "isSpecial": false
     },
     {
-      "beat": 19, "subdivision": 1, 
-      "length": 0,
-      "requiredFrets": ["Q","W","E"], 
-      "strumType": "Down", 
-      "isSpecial": false
+      "beat": 19, "subdivision": 1, "endBeat": 0, "endSubdivision": 0,
+      "requiredFrets": ["Q","W","E"], "strumType": "Down", "isSpecial": false
     },
     {
-      "beat": 19, "subdivision": 2, 
-      "length": 0,
-      "requiredFrets": ["Q","W","E"], 
-      "strumType": "Up", 
-      "isSpecial": false
+      "beat": 19, "subdivision": 2, "endBeat": 0, "endSubdivision": 0,
+      "requiredFrets": ["Q","W","E"], "strumType": "Up", "isSpecial": false
     },
     {
-      "beat": 19, "subdivision": 3, 
-      "length": 0,
-      "requiredFrets": ["Q","W","E"], 
-      "strumType": "Down", 
-      "isSpecial": false
+      "beat": 19, "subdivision": 3, "endBeat": 0, "endSubdivision": 0,
+      "requiredFrets": ["Q","W","E"], "strumType": "Down", "isSpecial": false
+    },
+    {
+      "beat": 20, "subdivision": 0, "endBeat": 0, "endSubdivision": 0,
+      "requiredFrets": [], "strumType": "Up", "isSpecial": false
+    },
+    {
+      "beat": 21, "subdivision": 0, "endBeat": 0, "endSubdivision": 0,
+      "requiredFrets": [], "strumType": "Down", "isSpecial": false
+    },
+    {
+      "beat": 22, "subdivision": 0, "endBeat": 0, "endSubdivision": 0,
+      "requiredFrets": [], "strumType": "Up", "isSpecial": false
+    },
+    {
+      "beat": 23, "subdivision": 0, "endBeat": 0, "endSubdivision": 0,
+      "requiredFrets": [], "strumType": "Down", "isSpecial": false
     }
   ]
 }

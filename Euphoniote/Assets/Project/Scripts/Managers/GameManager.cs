@@ -9,6 +9,7 @@ public class GameManager : MonoBehaviour
     public NoteSpawner noteSpawner;
     public StatsManager statsManager;
     public JudgmentManager judgmentManager;
+    public SkillManager skillManager;
 
     public AudioClip testSong; // 拖入一首测试音乐
     public string testChartFileName = "Sample.json";
@@ -42,6 +43,8 @@ public class GameManager : MonoBehaviour
 
         float bpm = chartLoader.CurrentChart.bpm;
         timingManager.PlaySong(testSong, bpm);
+
+        skillManager.Initialize();
     }
 
     private void HandleGameOver()

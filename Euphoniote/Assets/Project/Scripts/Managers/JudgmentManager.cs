@@ -159,6 +159,13 @@ public class JudgmentManager : MonoBehaviour
             return;
         }
 
+        if (SkillManager.Instance != null && SkillManager.Instance.IsAutoPerfectActive)
+        {
+            // 如果技能激活，所有非Miss的判定都强制为Perfect
+            BroadcastJudgment(JudgmentType.Perfect, noteToJudge, false);
+            return;
+        }
+
         if (timeDiff <= perfectWindow) { BroadcastJudgment(JudgmentType.Perfect, noteToJudge, false); }
         else if (timeDiff <= greatWindow) { BroadcastJudgment(JudgmentType.Great, noteToJudge, false); }
         else if (timeDiff <= goodWindow) { BroadcastJudgment(JudgmentType.Good, noteToJudge, false); }
@@ -183,18 +190,27 @@ public class JudgmentManager : MonoBehaviour
 
         if (noteToJudge is HoldNoteController holdNote)
         {
-            JudgmentType headJudgment = JudgmentType.Good;
-            if (timeDiffAbs <= perfectWindow) headJudgment = JudgmentType.Perfect;
-            else if (timeDiffAbs <= greatWindow) headJudgment = JudgmentType.Great;
-
-            // 触发 Hold 开始调试事件
-            OnHoldNoteDebug?.Invoke(new HoldDebugInfo { Stage = "Start", TimeDiff = timeDiffRaw, HeadJudgment = headJudgment });
+            OnHoldNoteDebug?.Invoke(new HoldDebugInfo { Stage = "Start", TimeDiff = timeDiffRaw, HeadJudgment = JudgmentType.Good });
 
             activeHoldNote = holdNote;
             activeHoldNote.SetHeadTimeDiff(timeDiffAbs);
             activeHoldNote.SetHeldState(true);
-
             TimingManager.Instance.ResetBeatTracking();
+
+            JudgmentType headJudgment;
+
+            // --- 【技能系统接入】 ---
+            if (SkillManager.Instance != null && SkillManager.Instance.IsAutoPerfectActive)
+            {
+                headJudgment = JudgmentType.Perfect;
+            }
+            else // 正常判定
+            {
+                if (timeDiffAbs <= perfectWindow) headJudgment = JudgmentType.Perfect;
+                else if (timeDiffAbs <= greatWindow) headJudgment = JudgmentType.Great;
+                else headJudgment = JudgmentType.Good;
+            }
+            // --- 技能系统结束 ---
 
             BroadcastJudgment(headJudgment, holdNote, false);
         }
@@ -227,12 +243,18 @@ public class JudgmentManager : MonoBehaviour
 
     private bool CheckFrets(List<FretKey> requiredFrets)
     {
+        if (SkillManager.Instance != null && SkillManager.Instance.IsIgnoreFretsActive)
+        {
+            return true;
+        }
+        if (requiredFrets == null || requiredFrets.Count == 0)
+        {
+            return true; // 直接判定左手条件成功
+        }
+
         foreach (var fret in requiredFrets)
         {
-            if (requiredFrets == null || requiredFrets.Count == 0)
-            {
-                return true; // 直接判定左手条件成功
-            }
+
             switch (fret)
             {
                 case FretKey.Q: if (!playerInput.Gameplay.FretQ.IsPressed()) return false; break;

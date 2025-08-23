@@ -19,6 +19,12 @@ public class SpriteAtlas : ScriptableObject
     public List<StrumType> holdNoteKeys;
     public List<Sprite> holdNoteSprites;
 
+    [Header("容器模板 ")]
+
+    [Tooltip("普通音容器模板")]
+    public Sprite normalContainerTemplate;
+    [Tooltip("特殊音符容器模板")]
+    public Sprite specialContainerTemplate;
     // 内部字典，用于快速查找，不对外暴露
     private Dictionary<StrumType, Sprite> strumDict;
     private Dictionary<FretKey, Sprite> fretDict;
@@ -75,5 +81,18 @@ public class SpriteAtlas : ScriptableObject
             return sprite;
         }
         return null;
+    }
+
+    public Sprite GetContainerTemplate(bool isSpecial)
+    {
+        // 根据 isSpecial 返回对应的模板图
+        if (isSpecial)
+        {
+            return specialContainerTemplate;
+        }
+        else
+        {
+            return normalContainerTemplate;
+        }
     }
 }

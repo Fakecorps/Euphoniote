@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   strumKeys: 0000000001000000
   strumSprites:
-  - {fileID: 21300000, guid: d940de1b8cde19c4a8fd55aad3160f2b, type: 3}
-  - {fileID: 21300000, guid: 65e52ad41bd9c624fa79e6814ff17daa, type: 3}
+  - {fileID: 21300000, guid: 3987e5f35b27f2d4abfba9d564d1a46f, type: 3}
+  - {fileID: 21300000, guid: df9ee18dc326bfb4598554a34e4a1562, type: 3}
   fretKeys: 000000000100000002000000030000000400000005000000
   fretSprites:
   - {fileID: 21300000, guid: 1cff617f7432da24da94716ce5b953a6, type: 3}
@@ -26,5 +26,5 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 4f97754d3060ba843a0c0a76944f997c, type: 3}
   holdNoteKeys: 0200000003000000
   holdNoteSprites:
-  - {fileID: 21300000, guid: dc9127252f50bdf41849fb8ca338329f, type: 3}
-  - {fileID: 21300000, guid: 27d2148d8a3cf3b4abe4c8b6fbc720d5, type: 3}
+  - {fileID: 21300000, guid: c06d1b2df44d2b84fa585448ce13fd07, type: 3}
+  - {fileID: 21300000, guid: 97cd1885647e93c4b88b11acb910364a, type: 3}

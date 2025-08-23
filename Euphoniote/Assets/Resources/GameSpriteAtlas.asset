@@ -18,13 +18,15 @@ MonoBehaviour:
   - {fileID: 21300000, guid: df9ee18dc326bfb4598554a34e4a1562, type: 3}
   fretKeys: 000000000100000002000000030000000400000005000000
   fretSprites:
-  - {fileID: 21300000, guid: 1cff617f7432da24da94716ce5b953a6, type: 3}
-  - {fileID: 21300000, guid: 0fce39d6ab8935349a14ec61c23d2c1e, type: 3}
-  - {fileID: 21300000, guid: efa7aa34940aa7d4e87b3a6592351c70, type: 3}
-  - {fileID: 21300000, guid: e9e91e0355b7e9341843e8cf61ca47d1, type: 3}
-  - {fileID: 21300000, guid: 7989b9f7f988e46488b27c3c22e31991, type: 3}
-  - {fileID: 21300000, guid: 4f97754d3060ba843a0c0a76944f997c, type: 3}
+  - {fileID: 21300000, guid: d195c6839c1807446b3e2168eee17f11, type: 3}
+  - {fileID: 21300000, guid: 8b8a17283bd60d344a04ef865fe48277, type: 3}
+  - {fileID: 21300000, guid: 3ba811390a07bf74f9356abf659111d1, type: 3}
+  - {fileID: 21300000, guid: 4c6270252cef77f4fb722b586376e0ad, type: 3}
+  - {fileID: 21300000, guid: 97e55df5731664249948a652e77fa5d2, type: 3}
+  - {fileID: 21300000, guid: 3842ff40a24b4f04c8bbc1c0ca3ec0ae, type: 3}
   holdNoteKeys: 0200000003000000
   holdNoteSprites:
   - {fileID: 21300000, guid: c06d1b2df44d2b84fa585448ce13fd07, type: 3}
   - {fileID: 21300000, guid: 97cd1885647e93c4b88b11acb910364a, type: 3}
+  normalContainerTemplate: {fileID: 21300000, guid: cab7842fe0856f842b436b0545356348, type: 3}
+  specialContainerTemplate: {fileID: 21300000, guid: bbd0fb39bb6a836419ba20e83719ed27, type: 3}

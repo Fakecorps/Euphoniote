@@ -10,11 +10,11 @@
     },
     {
       "beat": 2, "subdivision": 0, "endBeat": 0, "endSubdivision": 0,
-      "requiredFrets": ["A"], "strumType": "Up", "isSpecial": false
+      "requiredFrets": ["A","Q"], "strumType": "Up", "isSpecial": false
     },
     {
       "beat": 2, "subdivision": 2, "endBeat": 0, "endSubdivision": 0,
-      "requiredFrets": ["A"], "strumType": "Down", "isSpecial": true
+      "requiredFrets": ["E","W","D"], "strumType": "Down", "isSpecial": true
     },
     {
       "beat": 3, "subdivision": 0, "endBeat": 0, "endSubdivision": 0,

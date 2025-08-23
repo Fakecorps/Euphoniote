@@ -1,4 +1,4 @@
-// _Project/Scripts/Managers/NoteSpawner.cs (完整最终版)
+// _Project/Scripts/Managers/NoteSpawner.cs (手动配置版)
 
 using UnityEngine;
 using System.Collections.Generic;
@@ -15,47 +15,34 @@ public class NoteSpawner : MonoBehaviour
     [Tooltip("谱面加载器")]
     public ChartLoader chartLoader;
 
-    [Header("生成设置")]
-    [Tooltip("音符滚动速度，这个值会传递给所有生成的音符")]
+    // --- 【核心修改】 ---
+    [Header("轨道与生成设置 (手动配置)")]
+    [Tooltip("音符在轨道上的滚动速度 (单位/秒)，这个值会传递给所有生成的音符")]
     public float scrollSpeed = 5f;
+
     [Tooltip("判定线的X坐标，同样会传递给所有音符")]
     public float judgmentLineX = -6f;
 
+    [Tooltip("音符生成的X坐标，确保这个值在屏幕右侧视野外")]
+    public float spawnX = 20f;
+
+    [Tooltip("音符生成的Y坐标，可以调整音符轨道在屏幕上的垂直位置")]
+    public float spawnY = 0f;
+    // --- 修改结束 ---
+
     private List<NoteData> notesToSpawn;
     private int nextNoteIndex = 0;
-
-    private float spawnX;         // 音符生成的X坐标
-    private float spawnAheadTime; // 根据配置动态计算出的提前生成时间
+    private float spawnAheadTime; // 提前生成的时间
 
     void Start()
     {
-        // 在游戏开始时计算一次生成位置和提前时间
-        CalculateSpawnPoint();
-    }
-
-    /// <summary>
-    /// 根据屏幕宽度和滚动速度，计算出音符应该在何处生成，以及需要提前多久生成。
-    /// </summary>
-    private void CalculateSpawnPoint()
-    {
-        Camera mainCamera = Camera.main;
-        if (mainCamera == null)
-        {
-            Debug.LogError("场景中找不到Tag为 'MainCamera' 的主摄像机!", this.gameObject);
-            spawnX = 20f; // 使用一个默认的屏幕外坐标
-            spawnAheadTime = (spawnX - judgmentLineX) / scrollSpeed;
-            return;
-        }
-
-        // 获取屏幕右上角在世界坐标系中的位置
-        Vector3 screenTopRight = new Vector3(Screen.width, Screen.height, mainCamera.nearClipPlane);
-        Vector3 worldTopRight = mainCamera.ScreenToWorldPoint(screenTopRight);
-
-        // 设置生成点在屏幕右边界再往右一点的位置，确保完全在视野外
-        spawnX = worldTopRight.x + 1.0f;
-
-        // 核心公式：时间 = 距离 / 速度
         spawnAheadTime = (spawnX - judgmentLineX) / scrollSpeed;
+
+        // 添加一个安全检查
+        if (spawnAheadTime <= 0)
+        {
+            Debug.LogError("Spawn Ahead Time 计算结果为0或负数！请确保 Spawn X 远大于 Judgment Line X。", this.gameObject);
+        }
     }
 
     /// <summary>
@@ -94,7 +81,7 @@ public class NoteSpawner : MonoBehaviour
     {
         if (notesToSpawn == null || nextNoteIndex >= notesToSpawn.Count)
         {
-            return; // 谱面未加载或已全部生成
+            return;
         }
 
         float songPosition = TimingManager.Instance.SongPosition;
@@ -103,27 +90,28 @@ public class NoteSpawner : MonoBehaviour
         if (songPosition >= notesToSpawn[nextNoteIndex].time - spawnAheadTime)
         {
             NoteData noteToSpawnData = notesToSpawn[nextNoteIndex];
+
+            // 使用你手动设置的 spawnX 来生成音符
+            Vector3 spawnPosition = new Vector3(spawnX, spawnY, -0.2f);
+
             GameObject noteObject;
             BaseNoteController controller;
 
-            // 根据duration判断应该生成哪种类型的音符
             if (noteToSpawnData.duration > 0)
             {
-                noteObject = Instantiate(holdNotePrefab, new Vector3(spawnX, 0, 0), Quaternion.identity);
+                noteObject = Instantiate(holdNotePrefab, spawnPosition, Quaternion.identity);
                 controller = noteObject.GetComponent<HoldNoteController>();
             }
             else
             {
-                noteObject = Instantiate(notePrefab, new Vector3(spawnX, 0, 0), Quaternion.identity);
+                noteObject = Instantiate(notePrefab, spawnPosition, Quaternion.identity);
                 controller = noteObject.GetComponent<NoteController>();
             }
 
-            // 在Initialize之前，将滚动速度等核心参数传递给NoteController
+            // 在Initialize之前，将手动设置的参数传递给NoteController
             controller.Setup(scrollSpeed, judgmentLineX);
-            // 初始化音符，设置其外观
             controller.Initialize(noteToSpawnData);
 
-            // 准备生成下一个音符
             nextNoteIndex++;
         }
     }

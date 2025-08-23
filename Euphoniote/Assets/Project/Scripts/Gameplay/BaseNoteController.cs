@@ -1,54 +1,28 @@
-// _Project/Scripts/Gameplay/BaseNoteController.cs (精简版)
+// _Project/Scripts/Gameplay/BaseNoteController.cs (最终组件化版)
 
 using UnityEngine;
 using System.Collections.Generic;
 
 public abstract class BaseNoteController : MonoBehaviour
 {
-    [Header("组件引用")]
+    // 不再需要直接引用视觉组件
     public NoteData noteData;
-    public SpriteRenderer arrowSprite;
-    public Transform fretContainer;
-
-    [Header("配置")]
-    public GameObject fretSpritePrefab;
-
     public bool IsJudged { get; private set; } = false;
 
-    // 统一由NoteSpawner传入
     protected float scrollSpeed;
     protected float judgmentLineX;
 
-    protected static SpriteAtlas spriteAtlas;
-
+    // Setup方法保持不变
     public void Setup(float speed, float lineX)
     {
         this.scrollSpeed = speed;
         this.judgmentLineX = lineX;
     }
 
+    // Initialize现在非常简单
     public virtual void Initialize(NoteData data)
     {
-        if (spriteAtlas == null)
-        {
-            spriteAtlas = Resources.Load<SpriteAtlas>("GameSpriteAtlas");
-            if (spriteAtlas != null) { spriteAtlas.Initialize(); }
-            else { Debug.LogError("无法在Resources文件夹中找到'GameSpriteAtlas'!"); return; }
-        }
-
         this.noteData = data;
-
-        // 只负责设置箭头
-        arrowSprite.sprite = spriteAtlas.GetStrumSprite(data.strumType);
-
-        // 清理旧的字母 (这一步依然保留，很重要)
-        foreach (Transform child in fretContainer)
-        {
-            Destroy(child.gameObject);
-        }
-
-        
-
     }
 
     public void SetJudged() { IsJudged = true; }
@@ -58,6 +32,7 @@ public abstract class BaseNoteController : MonoBehaviour
 
     protected virtual void Update()
     {
+        // 移动逻辑保持不变，它移动的是整个Note的根对象
         if (!IsJudged && TimingManager.Instance != null)
         {
             float currentSongTime = TimingManager.Instance.SongPosition;

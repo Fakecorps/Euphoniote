@@ -1,68 +1,30 @@
-// _Project/Scripts/Gameplay/NoteController.cs (实现垂直排列)
+// _Project/Scripts/Gameplay/NoteController.cs (组件化修改版)
 
 using UnityEngine;
 using System.Collections;
 
 public class NoteController : BaseNoteController
 {
+    [Header("核心模块")]
+    [Tooltip("对头部模块的引用")]
+    public NoteHeadController headController;
+
     private bool isFadingOut = false;
-
-    [Header("Note 特有组件")]
-    [Tooltip("对九宫格容器背景的SpriteRenderer的引用")]
-    public SpriteRenderer containerRenderer;
-
-    [Header("布局参数")]
-    [Tooltip("单个字母在容器中所占的高度")]
-    public float heightPerLetter = 0.8f;
-    [Tooltip("容器上下的额外内边距")]
-    public float verticalPadding = 0.2f;
 
     public override void Initialize(NoteData data)
     {
-        base.Initialize(data); // 先执行公共初始化（设置箭头等）
+        // 调用基类方法，只负责设置 noteData 和其他基础状态
+        base.Initialize(data);
 
-        if (containerRenderer == null)
+        // 检查头部模块引用是否存在
+        if (headController == null)
         {
-            Debug.LogError("NoteController 上的 Container Renderer 字段没有赋值!", this.gameObject);
+            Debug.LogError("NoteController 上的 Head Controller 字段没有赋值!", this.gameObject);
             return;
         }
 
-        // --- 核心逻辑：先选模板，再计算拉伸 ---
-
-        // 1. 根据是否为特殊音符，从 SpriteAtlas 获取正确的【模板图】
-        Sprite containerTemplate = spriteAtlas.GetContainerTemplate(data.isSpecial);
-        if (containerTemplate != null)
-        {
-            containerRenderer.sprite = containerTemplate;
-        }
-        else
-        {
-            Debug.LogError($"在SpriteAtlas中找不到 isSpecial={data.isSpecial} 对应的容器模板！");
-            return;
-        }
-
-        // 2. 计算字母数量
-        // 规则：即使没有字母(Open Note)，也按1个字母的高度来显示容器
-        int fretCount = (data.requiredFrets != null) ? data.requiredFrets.Count : 0;
-        int containerSizeLevel = (fretCount == 0) ? 1 : fretCount; // 用于计算高度的级别
-
-        // 3. 计算并设置容器背景的拉伸高度
-        float targetHeight = (containerSizeLevel * heightPerLetter) + (verticalPadding * 2);
-        containerRenderer.size = new Vector2(containerRenderer.size.x, targetHeight);
-
-        // 4. 在容器内垂直排列字母 (只有在 fretCount > 0 时才执行)
-        if (fretCount > 0)
-        {
-            float totalLetterHeight = fretCount * heightPerLetter;
-            float startY = (totalLetterHeight / 2f) - (heightPerLetter / 2f);
-
-            for (int i = 0; i < fretCount; i++)
-            {
-                GameObject fretObj = Instantiate(fretSpritePrefab, fretContainer);
-                fretObj.GetComponent<SpriteRenderer>().sprite = spriteAtlas.GetFretSprite(data.requiredFrets[i]);
-                fretObj.transform.localPosition = new Vector3(0, startY - i * heightPerLetter, 0);
-            }
-        }
+        // 将初始化视觉表现的任务完全委托给头部模块
+        headController.Initialize(data);
     }
 
     protected override void Update()
@@ -82,22 +44,28 @@ public class NoteController : BaseNoteController
     private IEnumerator FadeOutAndDestroy()
     {
         isFadingOut = true;
-        SpriteRenderer[] allRenderers = GetComponentsInChildren<SpriteRenderer>();
-        float fadeDuration = 0.2f;
-        float timer = 0f;
-        Color[] initialColors = new Color[allRenderers.Length];
-        for (int i = 0; i < allRenderers.Length; i++) { initialColors[i] = allRenderers[i].color; }
 
-        while (timer < fadeDuration)
+        // 现在我们只改变头部模块的透明度
+        if (headController != null)
         {
-            timer += Time.deltaTime;
-            float alpha = Mathf.Lerp(1f, 0f, timer / fadeDuration);
-            for (int i = 0; i < allRenderers.Length; i++)
+            SpriteRenderer[] allRenderers = headController.GetComponentsInChildren<SpriteRenderer>();
+            float fadeDuration = 0.2f;
+            float timer = 0f;
+            Color[] initialColors = new Color[allRenderers.Length];
+            for (int i = 0; i < allRenderers.Length; i++) { initialColors[i] = allRenderers[i].color; }
+
+            while (timer < fadeDuration)
             {
-                allRenderers[i].color = new Color(initialColors[i].r, initialColors[i].g, initialColors[i].b, alpha);
+                timer += Time.deltaTime;
+                float alpha = Mathf.Lerp(1f, 0f, timer / fadeDuration);
+                for (int i = 0; i < allRenderers.Length; i++)
+                {
+                    allRenderers[i].color = new Color(initialColors[i].r, initialColors[i].g, initialColors[i].b, alpha);
+                }
+                yield return null;
             }
-            yield return null;
         }
+
         Destroy(gameObject);
     }
 }

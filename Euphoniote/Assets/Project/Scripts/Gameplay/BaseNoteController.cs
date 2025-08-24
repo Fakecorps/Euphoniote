@@ -3,7 +3,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-public abstract class BaseNoteController : MonoBehaviour
+public abstract class BaseNoteController : MonoBehaviour, INoteController
 {
     // 不再需要直接引用视觉组件
     public NoteData noteData;
@@ -11,6 +11,9 @@ public abstract class BaseNoteController : MonoBehaviour
 
     protected float scrollSpeed;
     protected float judgmentLineX;
+
+    public NoteData GetNoteData() => noteData;
+    public GameObject GetGameObject() => gameObject;
 
     // Setup方法保持不变
     public void Setup(float speed, float lineX)

@@ -1,8 +1,14 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+// _Project/Scripts/Data/JudgmentResult.cs
 
-public enum JudgmentType { Perfect, Great, Good, Miss, HoldBreak }
+public enum JudgmentType 
+{ 
+    Perfect, 
+    Great, 
+    Good, 
+    Miss, 
+    HoldBreak, 
+    HoldHead // <<-- 确保添加了这个新的枚举值
+}
 
 public struct JudgmentResult
 {

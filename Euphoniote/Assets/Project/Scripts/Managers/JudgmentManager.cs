@@ -1,13 +1,13 @@
-// _Project/Scripts/Managers/JudgmentManager.cs (完整最终版)
+// _Project/Scripts/Managers/JudgmentManager.cs
 
 using UnityEngine;
 using UnityEngine.InputSystem;
 using System.Collections.Generic;
 using System;
+using System.Linq;
 
 public class JudgmentManager : MonoBehaviour
 {
-    #region Singleton & Core Variables
     public static JudgmentManager Instance { get; private set; }
 
     [Header("判定时间窗口 (秒)")]
@@ -17,41 +17,42 @@ public class JudgmentManager : MonoBehaviour
 
     public static event Action<JudgmentResult> OnNoteJudged;
 
-    private static List<BaseNoteController> activeNotes = new List<BaseNoteController>();
+    // 使用通用接口 INoteController 来管理所有类型的音符
+    private static List<INoteController> activeNotes = new List<INoteController>();
     private PlayerInputActions playerInput;
     private HoldNoteController activeHoldNote = null;
-    #endregion
 
-    #region Debug Events
-    // 定义一个包含详细信息的事件参数类，专门用于调试
     public class HoldDebugInfo
     {
-        public string Stage; // "Start", "Break", "Success"
+        public string Stage;
         public float TimeDiff;
         public JudgmentType? HeadJudgment;
         public JudgmentType? FinalJudgment;
     }
-    // 定义调试事件
     public static event Action<HoldDebugInfo> OnHoldNoteDebug;
-    #endregion
 
-    #region Unity Lifecycle & Input Subscription
     void Awake()
     {
-        if (Instance == null) { Instance = this; } else { Destroy(gameObject); }
+        if (Instance == null) { Instance = this; }
+        else { Destroy(gameObject); }
         playerInput = new PlayerInputActions();
     }
 
-    void OnEnable()
+    public void Initialize()
     {
         playerInput.Gameplay.Enable();
+        UnsubscribeFromInputEvents();
         SubscribeToInputEvents();
+        Debug.Log("JudgmentManager Initialized and Subscribed.");
     }
 
-    void OnDisable()
+    public void DisableInput()
     {
-        playerInput.Gameplay.Disable();
-        UnsubscribeFromInputEvents();
+        if (playerInput != null)
+        {
+            playerInput.Gameplay.Disable();
+            UnsubscribeFromInputEvents();
+        }
     }
 
     private void SubscribeToInputEvents()
@@ -69,47 +70,34 @@ public class JudgmentManager : MonoBehaviour
         playerInput.Gameplay.HoldLeft.started -= HandleHoldNoteInput;
         playerInput.Gameplay.HoldRight.started -= HandleHoldNoteInput;
     }
-    #endregion
-    public void Initialize()
-    {
-        // 订阅事件
-        SubscribeToInputEvents();
-        Debug.Log("JudgmentManager Initialized and Subscribed.");
-    }
 
     void Update()
     {
         if (activeHoldNote != null)
         {
-            if (activeHoldNote.gameObject == null || !activeHoldNote.gameObject.activeInHierarchy)
+            if (activeHoldNote.GetGameObject() == null || !activeHoldNote.GetGameObject().activeInHierarchy)
             {
                 activeHoldNote = null;
                 return;
             }
 
-            // 【核心逻辑重构】判定顺序调整
-
-            // 1. 优先检查玩家是否中途松手 (HoldBreak)
-            bool stillHoldingFrets = CheckFrets(activeHoldNote.noteData.requiredFrets);
-            bool stillHoldingStrum = (activeHoldNote.noteData.strumType == StrumType.HoldLeft)
-                                        ? playerInput.Gameplay.HoldLeft.IsPressed()
-                                        : playerInput.Gameplay.HoldRight.IsPressed();
+            bool stillHoldingFrets = CheckFrets(activeHoldNote.GetNoteData().requiredFrets);
+            bool stillHoldingStrum = (activeHoldNote.GetNoteData().strumType == StrumType.HoldLeft)
+                                     ? playerInput.Gameplay.HoldLeft.IsPressed()
+                                     : playerInput.Gameplay.HoldRight.IsPressed();
 
             if (!stillHoldingFrets || !stillHoldingStrum)
             {
-                StatsManager.Instance.BreakCombo();
                 OnHoldNoteDebug?.Invoke(new HoldDebugInfo { Stage = "Break" });
                 BroadcastJudgment(JudgmentType.HoldBreak, activeHoldNote, false);
                 activeHoldNote.SetHeldState(false);
                 activeHoldNote = null;
-                return; 
+                return;
             }
 
-            // 2. 如果没有中断，再检查是否成功
-            float songPosition = TimingManager.Instance.SongPosition;
-            float noteEndTime = activeHoldNote.noteData.time + activeHoldNote.noteData.duration;
-
-            if (songPosition >= noteEndTime)
+            // 从 NoteSpawner 获取判定线的X坐标
+            float judgmentLineX = NoteSpawner.Instance.judgmentLineX;
+            if (activeHoldNote.endCapAnchor != null && activeHoldNote.endCapAnchor.transform.position.x <= judgmentLineX)
             {
                 float headTimeDiff = activeHoldNote.HeadTimeDiff;
                 JudgmentType finalJudgment = JudgmentType.Good;
@@ -117,13 +105,21 @@ public class JudgmentManager : MonoBehaviour
                 else if (headTimeDiff <= greatWindow) { finalJudgment = JudgmentType.Great; }
 
                 OnHoldNoteDebug?.Invoke(new HoldDebugInfo { Stage = "Success", TimeDiff = headTimeDiff, FinalJudgment = finalJudgment });
-                BroadcastJudgment(finalJudgment, activeHoldNote, true);
-                activeHoldNote.SetHeldState(false);
+
+                // 2. 广播判定结果，但不销毁Note对象 (destroyNote = false)
+                //    这会更新分数、Combo等，但让Note的GameObject继续存在
+                BroadcastJudgment(finalJudgment, activeHoldNote, false);
+
+                // 3. 命令NoteController自己开始播放收缩动画
+                //    NoteController现在接管了自己的生命周期
+                activeHoldNote.StartSuccessShrink();
+
+                // 4. JudgmentManager完成任务，清除对这个Note的引用，不再管理它
                 activeHoldNote = null;
+
                 return;
             }
 
-            // 3. 如果既没有中断也没有成功，则处理节拍 Combo
             int passedBeats = TimingManager.Instance.GetPassedBeats();
             if (passedBeats > 0)
             {
@@ -132,7 +128,6 @@ public class JudgmentManager : MonoBehaviour
         }
     }
 
-    #region Input Handlers & Judgment Logic
     private void HandleTapNoteInput(InputAction.CallbackContext context)
     {
         StrumType type = context.action == playerInput.Gameplay.UpStrum ? StrumType.Up : StrumType.Down;
@@ -147,13 +142,13 @@ public class JudgmentManager : MonoBehaviour
 
     private void CheckTapNote(StrumType strumType)
     {
-        BaseNoteController noteToJudge = FindClosestNote(strumType, false);
+        BaseNoteController noteToJudge = FindClosestTapNote(strumType);
         if (noteToJudge == null) return;
 
-        float timeDiff = Mathf.Abs(noteToJudge.noteData.time - TimingManager.Instance.SongPosition);
+        float timeDiff = Mathf.Abs(noteToJudge.GetNoteData().time - TimingManager.Instance.SongPosition);
         if (timeDiff > goodWindow) return;
 
-        if (!CheckFrets(noteToJudge.noteData.requiredFrets))
+        if (!CheckFrets(noteToJudge.GetNoteData().requiredFrets))
         {
             BroadcastJudgment(JudgmentType.Miss, noteToJudge, false);
             return;
@@ -161,7 +156,6 @@ public class JudgmentManager : MonoBehaviour
 
         if (SkillManager.Instance != null && SkillManager.Instance.IsAutoPerfectActive)
         {
-            // 如果技能激活，所有非Miss的判定都强制为Perfect
             BroadcastJudgment(JudgmentType.Perfect, noteToJudge, false);
             return;
         }
@@ -174,87 +168,71 @@ public class JudgmentManager : MonoBehaviour
     private void CheckHoldStart(StrumType strumType)
     {
         if (activeHoldNote != null) return;
-        BaseNoteController noteToJudge = FindClosestNote(strumType, true);
+        HoldNoteController noteToJudge = FindClosestHoldNote(strumType);
         if (noteToJudge == null) return;
 
-        float timeDiffRaw = noteToJudge.noteData.time - TimingManager.Instance.SongPosition;
+        NoteData data = noteToJudge.GetNoteData();
+        float timeDiffRaw = data.time - TimingManager.Instance.SongPosition;
         float timeDiffAbs = Mathf.Abs(timeDiffRaw);
 
         if (timeDiffAbs > goodWindow) return;
 
-        if (!CheckFrets(noteToJudge.noteData.requiredFrets))
+        if (!CheckFrets(data.requiredFrets))
         {
             BroadcastJudgment(JudgmentType.Miss, noteToJudge, false);
             return;
         }
 
-        if (noteToJudge is HoldNoteController holdNote)
+        JudgmentType headJudgment;
+        if (SkillManager.Instance != null && SkillManager.Instance.IsAutoPerfectActive) { headJudgment = JudgmentType.Perfect; }
+        else
         {
-            OnHoldNoteDebug?.Invoke(new HoldDebugInfo { Stage = "Start", TimeDiff = timeDiffRaw, HeadJudgment = JudgmentType.Good });
-
-            activeHoldNote = holdNote;
-            activeHoldNote.SetHeadTimeDiff(timeDiffAbs);
-            activeHoldNote.SetHeldState(true);
-            TimingManager.Instance.ResetBeatTracking();
-
-            JudgmentType headJudgment;
-
-            // --- 【技能系统接入】 ---
-            if (SkillManager.Instance != null && SkillManager.Instance.IsAutoPerfectActive)
-            {
-                headJudgment = JudgmentType.Perfect;
-            }
-            else // 正常判定
-            {
-                if (timeDiffAbs <= perfectWindow) headJudgment = JudgmentType.Perfect;
-                else if (timeDiffAbs <= greatWindow) headJudgment = JudgmentType.Great;
-                else headJudgment = JudgmentType.Good;
-            }
-            // --- 技能系统结束 ---
-
-            BroadcastJudgment(headJudgment, holdNote, false);
+            if (timeDiffAbs <= perfectWindow) headJudgment = JudgmentType.Perfect;
+            else if (timeDiffAbs <= greatWindow) headJudgment = JudgmentType.Great;
+            else headJudgment = JudgmentType.Good;
         }
+
+        OnHoldNoteDebug?.Invoke(new HoldDebugInfo { Stage = "Start", TimeDiff = timeDiffRaw, HeadJudgment = headJudgment });
+
+        activeHoldNote = noteToJudge;
+        activeHoldNote.SetHeadTimeDiff(timeDiffAbs);
+        activeHoldNote.SetHeldState(true);
+        TimingManager.Instance.ResetBeatTracking();
+
+        BroadcastJudgment(JudgmentType.HoldHead, noteToJudge, false);
     }
 
-    public void ProcessMiss(BaseNoteController note)
+    public void ProcessMiss(INoteController note)
     {
-        if (note == null || !note.gameObject.activeSelf || note.IsJudged) return;
+        if (note == null || !note.GetGameObject().activeSelf || note.IsJudged) return;
         BroadcastJudgment(JudgmentType.Miss, note, false);
     }
-    #endregion
 
-    #region Helper & Static Methods
-    private BaseNoteController FindClosestNote(StrumType strumType, bool isHoldNote)
+    private BaseNoteController FindClosestTapNote(StrumType strumType)
     {
-        BaseNoteController closestNote = null;
-        float minTimeDiff = float.MaxValue;
-        foreach (var note in activeNotes)
-        {
-            if (note.IsJudged) continue;
-            bool typeMatch = (isHoldNote) ? (note.noteData.duration > 0) : (note.noteData.duration == 0);
-            if (note.noteData.strumType == strumType && typeMatch)
-            {
-                float timeDiff = Mathf.Abs(note.noteData.time - TimingManager.Instance.SongPosition);
-                if (timeDiff < minTimeDiff) { minTimeDiff = timeDiff; closestNote = note; }
-            }
-        }
-        return closestNote;
+        return activeNotes
+            .OfType<BaseNoteController>()
+            .Where(n => !n.IsJudged && n.GetNoteData().strumType == strumType)
+            .OrderBy(n => Mathf.Abs(n.GetNoteData().time - TimingManager.Instance.SongPosition))
+            .FirstOrDefault();
+    }
+
+    private HoldNoteController FindClosestHoldNote(StrumType strumType)
+    {
+        return activeNotes
+            .OfType<HoldNoteController>()
+            .Where(n => !n.IsJudged && n.GetNoteData().strumType == strumType)
+            .OrderBy(n => Mathf.Abs(n.GetNoteData().time - TimingManager.Instance.SongPosition))
+            .FirstOrDefault();
     }
 
     private bool CheckFrets(List<FretKey> requiredFrets)
     {
-        if (SkillManager.Instance != null && SkillManager.Instance.IsIgnoreFretsActive)
-        {
-            return true;
-        }
-        if (requiredFrets == null || requiredFrets.Count == 0)
-        {
-            return true; // 直接判定左手条件成功
-        }
+        if (SkillManager.Instance != null && SkillManager.Instance.IsIgnoreFretsActive) return true;
+        if (requiredFrets == null || requiredFrets.Count == 0) return true;
 
         foreach (var fret in requiredFrets)
         {
-
             switch (fret)
             {
                 case FretKey.Q: if (!playerInput.Gameplay.FretQ.IsPressed()) return false; break;
@@ -268,26 +246,30 @@ public class JudgmentManager : MonoBehaviour
         return true;
     }
 
-    private void BroadcastJudgment(JudgmentType type, BaseNoteController note, bool destroyNote = false)
+    private void BroadcastJudgment(JudgmentType type, INoteController note, bool destroyNote = false)
     {
-        if (note == null || !note.gameObject.activeSelf || note.IsJudged) return;
-        Debug.Log($"<color=magenta>[EVENT SENT] JudgmentManager 正在广播: {type}</color>", note.gameObject);
-        note.SetJudged();
-        OnNoteJudged?.Invoke(new JudgmentResult { Type = type, IsSpecialNote = note.noteData.isSpecial });
+        if (note == null || !note.GetGameObject().activeSelf || (note.IsJudged && type != JudgmentType.HoldHead)) return;
+
+        if (type != JudgmentType.HoldHead)
+        {
+            note.SetJudged();
+        }
+
+        OnNoteJudged?.Invoke(new JudgmentResult { Type = type, IsSpecialNote = note.GetNoteData().isSpecial });
+
         if (destroyNote)
         {
-            Destroy(note.gameObject);
+            Destroy(note.GetGameObject());
         }
     }
 
-    public static void RegisterNote(BaseNoteController note)
+    public static void RegisterNote(INoteController note)
     {
         if (note != null && !activeNotes.Contains(note)) activeNotes.Add(note);
     }
 
-    public static void UnregisterNote(BaseNoteController note)
+    public static void UnregisterNote(INoteController note)
     {
         if (note != null && activeNotes.Contains(note)) activeNotes.Remove(note);
     }
-    #endregion
 }

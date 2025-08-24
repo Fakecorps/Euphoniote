@@ -1,163 +1,168 @@
-// _Project/Scripts/Gameplay/HoldNoteController.cs
+// _Project/Scripts/Gameplay/HoldNoteController.cs (事件驱动销毁版)
 
 using UnityEngine;
+using System; // 需要这个来使用 Action
 
-public class HoldNoteController : BaseNoteController
+public class HoldNoteController : MonoBehaviour, INoteController
 {
+    // --- 新增部分 ---
+    /// <summary>
+    /// 当 Hold Note 的收缩动画完成时触发的静态事件。
+    /// 任何外部系统都可以监听此事件来进行清理工作。
+    /// </summary>
+    public static event Action<HoldNoteController> OnShrinkAnimationComplete;
+
+    // ... [其他所有字段和属性保持不变] ...
     [Header("核心模块")]
-    [Tooltip("对头部模块(NoteHead.prefab实例)的引用")]
-    public NoteHeadController headController;
-    [Tooltip("对结束帽模块(NoteHead.prefab实例)的引用")]
-    public NoteHeadController endCapController;
+    public NoteHeadController headVisuals;
+    public NoteAnchorController headAnchor;
+    public NoteHeadController endCapVisuals;
+    public NoteAnchorController endCapAnchor;
 
-    [Header("长条组件")]
-    [Tooltip("箭头后面的长条SpriteRenderer")]
-    public SpriteRenderer arrowTrailRenderer;
-    [Tooltip("容器后面的长条SpriteRenderer")]
-    public SpriteRenderer containerTrailRenderer;
+    [System.Serializable]
+    public class TrailSystem
+    {
+        public Transform trailContainer;
+        public Transform head;
+        public SpriteRenderer body;
+        public Transform end;
+    }
 
-    [Header("布局与尺寸 (手动配置)")]
-    [Tooltip("头部的视觉宽度，用于计算偏移量")]
-    public float headVisualWidth = 1.5f;
+    [Header("长条组件 (三段式)")]
+    public TrailSystem arrowTrail;
+    public TrailSystem containerTrail;
 
-    // 内部状态
     private bool isBeingHeld = false;
+    private NoteData noteData;
+    private bool isShrinking = false;
+
+    public bool IsJudged { get; private set; } = false;
+    public void SetJudged() { IsJudged = true; }
     public float HeadTimeDiff { get; private set; }
+    public void SetHeadTimeDiff(float diff) { HeadTimeDiff = Mathf.Abs(diff); }
+    public NoteData GetNoteData() => noteData;
+    public GameObject GetGameObject() => gameObject;
 
-    /// <summary>
-    /// 设置头部判定的时间误差，由 JudgmentManager 调用。
-    /// </summary>
-    public void SetHeadTimeDiff(float diff)
+    // ... [Initialize, OnEnable, OnDisable 方法保持不变] ...
+    public void Initialize(NoteData data, float speed, float lineX)
     {
-        HeadTimeDiff = Mathf.Abs(diff);
+        this.noteData = data;
+        if (headVisuals != null) { headVisuals.Initialize(data, true); }
+        if (endCapVisuals != null) { endCapVisuals.Initialize(data, false); }
+
+        float noteEndTime = data.time + data.duration;
+        if (headAnchor != null) { headAnchor.Setup(data.time, speed, lineX); }
+        if (endCapAnchor != null) { endCapAnchor.Setup(noteEndTime, speed, lineX); }
     }
 
-    /// <summary>
-    /// 初始化 HoldNote 的所有视觉元素。
-    /// </summary>
-    public override void Initialize(NoteData data)
+    void OnEnable()
     {
-        // 调用基类方法，只负责设置 noteData
-        base.Initialize(data);
-
-        // 1. 初始化头部 (带字母)
-        if (headController != null)
-        {
-            // true 表示需要生成字母
-            headController.Initialize(data, true);
-        }
-        else
-        {
-            Debug.LogError("HoldNoteController 上的 Head Controller 引用为空！", this.gameObject);
-        }
-
-        // 2. 初始化结束帽 (不带字母)
-        if (endCapController != null)
-        {
-            // false 表示这是一个空壳，不需要生成字母
-            endCapController.Initialize(data, false);
-        }
-        else
-        {
-            Debug.LogError("HoldNoteController 上的 End Cap Controller 引用为空！", this.gameObject);
-        }
-
-        // 3. 初始化长条和结束帽的位置
-        float trailLength = data.duration * scrollSpeed;
-
-        // a. 设置长条
-        if (arrowTrailRenderer != null && containerTrailRenderer != null)
-        {
-            // 在这里你可以从 SpriteAtlas 获取并设置长条的 Sprite (如果需要动态更换)
-            // 示例: arrowTrailRenderer.sprite = spriteAtlas.GetArrowTrailTemplate();
-
-            // 设置初始长度
-            arrowTrailRenderer.size = new Vector2(trailLength, arrowTrailRenderer.size.y);
-            containerTrailRenderer.size = new Vector2(trailLength, containerTrailRenderer.size.y);
-
-            // 设置初始位置
-            // 偏移量 = 头部宽度的一半 + 长条自身长度的一半
-            float trailOffsetX = (headVisualWidth / 2f) + (trailLength / 2f);
-            arrowTrailRenderer.transform.localPosition = new Vector3(trailOffsetX, arrowTrailRenderer.transform.localPosition.y, 0);
-            containerTrailRenderer.transform.localPosition = new Vector3(trailOffsetX, containerTrailRenderer.transform.localPosition.y, 0);
-        }
-
-        // b. 设置结束帽的初始位置
-        if (endCapController != null)
-        {
-            // 结束帽的位置 = 头部宽度的一半 + 整个长条的长度
-            float endCapOffsetX = (headVisualWidth / 2f) + trailLength;
-            endCapController.transform.localPosition = new Vector3(endCapOffsetX, endCapController.transform.localPosition.y, 0);
-        }
+        JudgmentManager.RegisterNote(this);
+    }
+    void OnDisable()
+    {
+        JudgmentManager.UnregisterNote(this);
     }
 
-    /// <summary>
-    /// 每帧更新音符的位置和状态。
-    /// </summary>
-    protected override void Update()
+    void Update()
     {
-        // 如果音符正在被按住，执行特殊的“吸附与消耗”逻辑
-        if (isBeingHeld)
+        if (isShrinking)
         {
-            // a. 将音符的根对象（头部判定点）吸附在判定线上
-            transform.position = new Vector2(judgmentLineX, transform.position.y);
+            UpdateTrails();
 
-            // b. 动态计算并更新长条和结束帽的视觉效果
-            float songPosition = TimingManager.Instance.SongPosition;
-            float elapsedTime = songPosition - noteData.time;
-            if (elapsedTime < 0) elapsedTime = 0;
-
-            float originalTotalLength = noteData.duration * scrollSpeed;
-            float consumedLength = elapsedTime * scrollSpeed;
-            float remainingLength = originalTotalLength - consumedLength;
-            if (remainingLength < 0) remainingLength = 0;
-
-            // 同时更新两条长条
-            if (arrowTrailRenderer != null && containerTrailRenderer != null)
+            // --- 核心修改点 ---
+            // 检查动画是否完成
+            if (endCapAnchor != null && endCapAnchor.transform.position.x < NoteSpawner.Instance.judgmentLineX - 2f)
             {
-                // 更新长度
-                arrowTrailRenderer.size = new Vector2(remainingLength, arrowTrailRenderer.size.y);
-                containerTrailRenderer.size = new Vector2(remainingLength, containerTrailRenderer.size.y);
+                // 广播事件，将自身作为参数传递出去
+                OnShrinkAnimationComplete?.Invoke(this);
 
-                // 更新位置，以实现从左到右消失的效果
-                // 新的偏移量 = 已消耗长度 + 剩余长度的一半
-                float trailOffsetX = consumedLength + (remainingLength / 2f);
-                arrowTrailRenderer.transform.localPosition = new Vector3(trailOffsetX, arrowTrailRenderer.transform.localPosition.y, 0);
-                containerTrailRenderer.transform.localPosition = new Vector3(trailOffsetX, containerTrailRenderer.transform.localPosition.y, 0);
+                // 禁用此脚本，防止事件被重复触发
+                this.enabled = false;
             }
-
-            // 结束帽的位置始终固定在长条的理论终点
-            if (endCapController != null)
-            {
-                float endCapOffsetX = originalTotalLength;
-                endCapController.transform.localPosition = new Vector3(endCapOffsetX, endCapController.transform.localPosition.y, 0);
-            }
+            return;
         }
-        else // 如果音符没有被按住
-        {
-            // 如果 IsJudged 为 true，说明它经历了最终判定（Miss 或 HoldBreak）
-            // 此时它应该自我销毁，完成其生命周期
-            if (IsJudged)
-            {
-                Destroy(gameObject);
-                return;
-            }
 
-            // 如果还未被判定，则执行基类中的正常移动逻辑
-            base.Update();
-            // 并检查是否超时Miss
+        if (IsJudged)
+        {
+            // 失败时的销毁逻辑不变，由外部系统决定
+            Destroy(gameObject);
+            return;
+        }
+
+        if (!isBeingHeld && noteData != null)
+        {
             if (noteData.time < TimingManager.Instance.SongPosition - JudgmentManager.Instance.goodWindow)
             {
                 JudgmentManager.Instance.ProcessMiss(this);
             }
         }
+
+        UpdateTrails();
     }
 
-    /// <summary>
-    /// 由 JudgmentManager 调用，用于更新音符的“被按住”状态。
-    /// </summary>
+    // ... [UpdateTrails 和 UpdateSingleTrailSystem 方法保持不变] ...
+    private void UpdateTrails()
+    {
+        if (headAnchor == null || endCapAnchor == null) return;
+
+        Vector3 headAnchorWorldPos = headAnchor.transform.position;
+        Vector3 endAnchorWorldPos = endCapAnchor.transform.position;
+
+        if (isShrinking)
+        {
+            headAnchorWorldPos.x = NoteSpawner.Instance.judgmentLineX;
+        }
+
+        UpdateSingleTrailSystem(arrowTrail, headAnchorWorldPos, endAnchorWorldPos);
+        UpdateSingleTrailSystem(containerTrail, headAnchorWorldPos, endAnchorWorldPos);
+    }
+
+    private void UpdateSingleTrailSystem(TrailSystem trail, Vector3 headWorldPos, Vector3 endWorldPos)
+    {
+        if (trail.trailContainer == null || trail.head == null || trail.body == null || trail.end == null) return;
+
+        Vector3 localHeadPos = trail.trailContainer.InverseTransformPoint(headWorldPos);
+        Vector3 localEndPos = trail.trailContainer.InverseTransformPoint(endWorldPos);
+
+        trail.head.localPosition = new Vector3(localHeadPos.x, trail.head.localPosition.y, trail.head.localPosition.z);
+        trail.end.localPosition = new Vector3(localEndPos.x, trail.end.localPosition.y, trail.end.localPosition.z);
+
+        float localDistance = Mathf.Abs(localEndPos.x - localHeadPos.x);
+
+        if (localDistance < 0.01f)
+        {
+            trail.body.enabled = false;
+            return;
+        }
+        trail.body.enabled = true;
+
+        float localMidX = (localHeadPos.x + localEndPos.x) / 2f;
+
+        trail.body.transform.localPosition = new Vector3(
+            localMidX,
+            trail.body.transform.localPosition.y,
+            trail.body.transform.localPosition.z
+        );
+
+        trail.body.size = new Vector2(localDistance, trail.body.size.y);
+    }
+
+    // ... [SetHeldState 和 StartSuccessShrink 方法保持不变] ...
     public void SetHeldState(bool held)
     {
         isBeingHeld = held;
+        if (isBeingHeld && headAnchor != null)
+        {
+            headAnchor.HoldPosition();
+        }
+    }
+
+    public void StartSuccessShrink()
+    {
+        isShrinking = true;
+        SetJudged();
+        if (headVisuals != null) { headVisuals.gameObject.SetActive(false); }
+        if (endCapVisuals != null) { endCapVisuals.gameObject.SetActive(false); }
     }
 }

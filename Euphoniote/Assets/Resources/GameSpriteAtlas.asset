@@ -12,10 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6c36b6aaa86b01f4ab78c32dc4fca165, type: 3}
   m_Name: GameSpriteAtlas
   m_EditorClassIdentifier: 
-  strumKeys: 0000000001000000
+  strumKeys: 00000000010000000200000003000000
   strumSprites:
   - {fileID: 21300000, guid: 3987e5f35b27f2d4abfba9d564d1a46f, type: 3}
   - {fileID: 21300000, guid: df9ee18dc326bfb4598554a34e4a1562, type: 3}
+  - {fileID: 21300000, guid: c06d1b2df44d2b84fa585448ce13fd07, type: 3}
+  - {fileID: 21300000, guid: 97cd1885647e93c4b88b11acb910364a, type: 3}
   fretKeys: 000000000100000002000000030000000400000005000000
   fretSprites:
   - {fileID: 21300000, guid: d195c6839c1807446b3e2168eee17f11, type: 3}

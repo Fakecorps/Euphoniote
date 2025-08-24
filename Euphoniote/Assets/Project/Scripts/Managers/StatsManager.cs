@@ -46,18 +46,11 @@ public class StatsManager : MonoBehaviour
         switch (result.Type)
         {
             case JudgmentType.Perfect:
-                IncrementCombo();
-                // --- 【技能系统接入】 ---
-                if (SkillManager.Instance != null && SkillManager.Instance.IsPerfectHealActive)
-                {
-                    ChangeHealth(SkillManager.Instance.GetHealAmount());
-                }
-                // --- 技能系统结束 ---
-                break; // 为Perfect单独设置一个case
-
             case JudgmentType.Great:
             case JudgmentType.Good:
+            case JudgmentType.HoldHead: // <<-- 确保将 HoldHead 添加到增加 Combo 的行列
                 IncrementCombo();
+                // ... (PerfectHeal的逻辑)
                 break;
 
             case JudgmentType.Miss:

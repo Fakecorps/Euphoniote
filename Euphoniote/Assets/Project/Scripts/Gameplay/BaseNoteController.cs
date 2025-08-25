@@ -5,7 +5,6 @@ using System.Collections.Generic;
 
 public abstract class BaseNoteController : MonoBehaviour, INoteController
 {
-    // 不再需要直接引用视觉组件
     public NoteData noteData;
     public bool IsJudged { get; private set; } = false;
 
@@ -15,14 +14,12 @@ public abstract class BaseNoteController : MonoBehaviour, INoteController
     public NoteData GetNoteData() => noteData;
     public GameObject GetGameObject() => gameObject;
 
-    // Setup方法保持不变
     public void Setup(float speed, float lineX)
     {
         this.scrollSpeed = speed;
         this.judgmentLineX = lineX;
     }
 
-    // Initialize现在非常简单
     public virtual void Initialize(NoteData data)
     {
         this.noteData = data;
@@ -30,12 +27,17 @@ public abstract class BaseNoteController : MonoBehaviour, INoteController
 
     public void SetJudged() { IsJudged = true; }
 
+    // --- 新增：一个公共方法，用于重置判定状态 ---
+    public void ResetJudgedState()
+    {
+        IsJudged = false;
+    }
+
     protected virtual void OnEnable() { JudgmentManager.RegisterNote(this); }
     protected virtual void OnDisable() { JudgmentManager.UnregisterNote(this); }
 
     protected virtual void Update()
     {
-        // 移动逻辑保持不变，它移动的是整个Note的根对象
         if (!IsJudged && TimingManager.Instance != null)
         {
             float currentSongTime = TimingManager.Instance.SongPosition;

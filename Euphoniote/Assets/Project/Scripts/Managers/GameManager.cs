@@ -10,6 +10,7 @@ public class GameManager : MonoBehaviour
     public StatsManager statsManager;
     public JudgmentManager judgmentManager;
     public SkillManager skillManager;
+    public NotePoolManager notePoolManager;
 
     public AudioClip testSong; // 拖入一首测试音乐
     public string testChartFileName = "Sample.json";

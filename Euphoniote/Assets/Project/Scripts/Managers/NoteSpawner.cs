@@ -85,16 +85,24 @@ public class NoteSpawner : MonoBehaviour
 
             if (noteToSpawnData.duration > 0)
             {
-                noteObject = Instantiate(holdNotePrefab, spawnPosition, Quaternion.identity);
+                noteObject = NotePoolManager.Instance.GetFromPool("HoldNote");
+                if (noteObject == null) return; // 安全检查，防止标签写错
+
+                noteObject.transform.position = spawnPosition;
+                noteObject.transform.rotation = Quaternion.identity;
+
                 HoldNoteController controller = noteObject.GetComponent<HoldNoteController>();
-                // 调用HoldNote自己的Initialize
                 controller.Initialize(noteToSpawnData, scrollSpeed, judgmentLineX);
             }
             else
             {
-                noteObject = Instantiate(notePrefab, spawnPosition, Quaternion.identity);
+                noteObject = NotePoolManager.Instance.GetFromPool("TapNote");
+                if (noteObject == null) return; // 安全检查
+
+                noteObject.transform.position = spawnPosition;
+                noteObject.transform.rotation = Quaternion.identity;
+
                 NoteController controller = noteObject.GetComponent<NoteController>();
-                // 调用BaseNoteController的Setup和NoteController的Initialize
                 controller.Setup(scrollSpeed, judgmentLineX);
                 controller.Initialize(noteToSpawnData);
             }

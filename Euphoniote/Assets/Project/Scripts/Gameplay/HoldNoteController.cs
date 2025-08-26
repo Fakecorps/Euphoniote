@@ -29,16 +29,13 @@ public class HoldNoteController : BaseNoteController, INoteController
     public TrailSystem containerTrail;
 
     private bool isBeingHeld = false;
-    private NoteData noteData;
+
     private bool isShrinking = false;
     private bool isCleanupScheduled = false;
 
-    public bool IsJudged { get; private set; } = false;
-    public void SetJudged() { IsJudged = true; }
+
     public float HeadTimeDiff { get; private set; }
     public void SetHeadTimeDiff(float diff) { HeadTimeDiff = Mathf.Abs(diff); }
-    public NoteData GetNoteData() => noteData;
-    public GameObject GetGameObject() => gameObject;
 
     public void Initialize(NoteData data, float speed, float lineX)
     {

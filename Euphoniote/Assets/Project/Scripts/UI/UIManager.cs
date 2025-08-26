@@ -24,6 +24,9 @@ public class UIManager : MonoBehaviour
     public float comboPunchScale = 1.2f;        // Combo文字放大的倍数
     public float comboAnimationDuration = 0.1f;
 
+    [Header("生命值UI")] // --- 新增部分 ---
+    public UnityEngine.UI.Image healthBarFill;
+
     // 内部变量
     private Coroutine judgmentImageAnimationCoroutine;
     private Coroutine comboAnimationCoroutine;
@@ -65,6 +68,7 @@ public class UIManager : MonoBehaviour
         StatsManager.OnComboChanged += HandleComboChanged;
         StatsManager.OnComboBroken += HandleComboBroken;
         JudgmentManager.OnNoteJudged += HandleJudgmentFeedback;
+        StatsManager.OnHealthChanged += HandleHealthChanged;
     }
 
     private void OnDisable()
@@ -72,6 +76,7 @@ public class UIManager : MonoBehaviour
         StatsManager.OnComboChanged -= HandleComboChanged;
         StatsManager.OnComboBroken -= HandleComboBroken;
         JudgmentManager.OnNoteJudged -= HandleJudgmentFeedback;
+        StatsManager.OnHealthChanged -= HandleHealthChanged;
     }
 
     private void HandleJudgmentFeedback(JudgmentResult result)
@@ -181,5 +186,16 @@ public class UIManager : MonoBehaviour
         }
 
         targetTransform.localScale = originalScale;
+    }
+
+    private void HandleHealthChanged(float currentHealth, float maxHealth)
+    {
+        if (healthBarFill == null) return;
+
+        // 计算填充比例 (0.0 到 1.0)
+        float fillAmount = currentHealth / maxHealth;
+
+        // 将计算出的比例应用到Image的fillAmount属性上
+        healthBarFill.fillAmount = fillAmount;
     }
 }

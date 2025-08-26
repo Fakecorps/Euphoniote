@@ -6,7 +6,7 @@ using System.Collections.Generic;
 public abstract class BaseNoteController : MonoBehaviour, INoteController
 {
     public NoteData noteData;
-    public bool IsJudged { get; private set; } = false;
+    public bool IsJudged { get; set; } = false;
 
     protected float scrollSpeed;
     protected float judgmentLineX;

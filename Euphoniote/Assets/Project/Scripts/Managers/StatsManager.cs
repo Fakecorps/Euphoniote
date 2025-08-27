@@ -7,6 +7,11 @@ public class StatsManager : MonoBehaviour
 {
     public static StatsManager Instance { get; private set; }
 
+    // --- 分数系统 ---
+    public long CurrentScore { get; private set; } = 0; // 使用 long 类型防止分数溢出
+    public static event Action<long> OnScoreChanged; // 分数变化时触发的事件
+
+    // --- Combo & Health 系统 (保持不变) ---
     public int CurrentCombo { get; private set; } = 0;
     public int MaxCombo { get; private set; } = 0;
     public float maxHealth = 100f;
@@ -28,7 +33,12 @@ public class StatsManager : MonoBehaviour
     {
         CurrentCombo = 0;
         MaxCombo = 0;
+        CurrentScore = 0;
         CurrentHealth = maxHealth;
+
+        // 触发一次事件，确保UI在游戏开始时显示为初始值 (例如 "0000000")
+        OnScoreChanged?.Invoke(CurrentScore);
+        OnHealthChanged?.Invoke(CurrentHealth, maxHealth);
 
         JudgmentManager.OnNoteJudged -= HandleJudgment;
         JudgmentManager.OnNoteJudged += HandleJudgment;
@@ -46,8 +56,14 @@ public class StatsManager : MonoBehaviour
         switch (result.Type)
         {
             case JudgmentType.Perfect:
+                AddToScore(JudgmentManager.Instance.perfectScore);
+                break;
             case JudgmentType.Great:
+                AddToScore(JudgmentManager.Instance.greatScore);
+                break;
             case JudgmentType.Good:
+                AddToScore(JudgmentManager.Instance.goodScore);
+                break;
             case JudgmentType.HoldHead: // <<-- 确保将 HoldHead 添加到增加 Combo 的行列
                 IncrementCombo();
                 // ... (PerfectHeal的逻辑)
@@ -98,5 +114,11 @@ public class StatsManager : MonoBehaviour
     public void AddToCombo(int amount)
     {
         for (int i = 0; i < amount; i++) { IncrementCombo(); }
+    }
+
+    private void AddToScore(int amount)
+    {
+        CurrentScore += amount;
+        OnScoreChanged?.Invoke(CurrentScore);
     }
 }

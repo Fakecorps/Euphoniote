@@ -15,6 +15,11 @@ public class JudgmentManager : MonoBehaviour
     public float greatWindow = 0.1f;
     public float goodWindow = 0.15f;
 
+    [Header("得分配置")]
+    public int perfectScore = 1000;
+    public int greatScore = 500;
+    public int goodScore = 200;
+
     public static event Action<JudgmentResult> OnNoteJudged;
 
     private static List<INoteController> activeNotes = new List<INoteController>();

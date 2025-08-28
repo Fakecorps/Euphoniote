@@ -14,7 +14,7 @@
     },
     {
       "beat": 2, "subdivision": 2, "endBeat": 0, "endSubdivision": 0,
-      "requiredFrets": ["E","W","D"], "strumType": "Down", "isSpecial": true
+      "requiredFrets": ["E"], "strumType": "Down", "isSpecial": true
     },
     {
       "beat": 3, "subdivision": 0, "endBeat": 0, "endSubdivision": 0,

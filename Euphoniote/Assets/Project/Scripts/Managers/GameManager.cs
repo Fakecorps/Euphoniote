@@ -12,6 +12,7 @@ public class GameManager : MonoBehaviour
     public SkillManager skillManager;
     public NotePoolManager notePoolManager;
     public PauseManager pauseManager;
+    public SoundFeedbackManager soundFeedbackManager;
 
     public AudioClip testSong; // 拖入一首测试音乐
     public string testChartFileName = "Sample.json";
@@ -38,6 +39,7 @@ public class GameManager : MonoBehaviour
 
         // 2. 确保事件广播者(JudgmentManager)后初始化
         if (judgmentManager != null) judgmentManager.Initialize();
+        if (soundFeedbackManager != null) soundFeedbackManager.Initialize();
 
         // 3. 开始游戏流程
         chartLoader.LoadChart(testChartFileName);

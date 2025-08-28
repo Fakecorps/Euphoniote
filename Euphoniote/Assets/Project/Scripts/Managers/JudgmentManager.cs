@@ -1,4 +1,4 @@
-// _Project/Scripts/Managers/JudgmentManager.cs (修正编译错误后的完整最终版)
+// _Project/Scripts/Managers/JudgmentManager.cs (最终修复版 - 增加空扫事件)
 
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -20,8 +20,11 @@ public class JudgmentManager : MonoBehaviour
     public int greatScore = 500;
     public int goodScore = 200;
 
+    // --- 核心事件 ---
     public static event Action<JudgmentResult> OnNoteJudged;
+    public static event Action OnMissStrum; // 新增：空扫事件
 
+    // 内部状态
     private static List<INoteController> activeNotes = new List<INoteController>();
     private PlayerInputActions playerInput;
     private HoldNoteController activeHoldNote = null;
@@ -147,15 +150,23 @@ public class JudgmentManager : MonoBehaviour
     private void CheckTapNote(StrumType strumType)
     {
         var noteToJudge = FindClosestTapNote(strumType);
-        if (noteToJudge == null) return;
 
-        // --- 修正点：确保变量名正确 ---
-        // 我们从接口获取具体的 NoteController 实例
+        if (noteToJudge == null)
+        {
+            OnMissStrum?.Invoke();
+            return;
+        }
+
         var noteControllerInstance = noteToJudge.GetGameObject().GetComponent<NoteController>();
         if (noteControllerInstance == null) return;
 
         float timeDiff = Mathf.Abs(noteControllerInstance.GetNoteData().time - TimingManager.Instance.SongPosition);
-        if (timeDiff > goodWindow) return;
+
+        if (timeDiff > goodWindow)
+        {
+            OnMissStrum?.Invoke();
+            return;
+        }
 
         if (!CheckFrets(noteControllerInstance.GetNoteData().requiredFrets))
         {
@@ -184,13 +195,22 @@ public class JudgmentManager : MonoBehaviour
     {
         if (activeHoldNote != null) return;
         HoldNoteController noteToJudge = FindClosestHoldNote(strumType);
-        if (noteToJudge == null) return;
+
+        if (noteToJudge == null)
+        {
+            OnMissStrum?.Invoke();
+            return;
+        }
 
         NoteData data = noteToJudge.GetNoteData();
         float timeDiffRaw = data.time - TimingManager.Instance.SongPosition;
         float timeDiffAbs = Mathf.Abs(timeDiffRaw);
 
-        if (timeDiffAbs > goodWindow) return;
+        if (timeDiffAbs > goodWindow)
+        {
+            OnMissStrum?.Invoke();
+            return;
+        }
 
         if (!CheckFrets(data.requiredFrets))
         {

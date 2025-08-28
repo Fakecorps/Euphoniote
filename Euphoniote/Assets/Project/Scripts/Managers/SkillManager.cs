@@ -2,6 +2,7 @@
 
 using UnityEngine;
 using System.Collections;
+using System;
 
 public class SkillManager : MonoBehaviour
 {
@@ -10,6 +11,7 @@ public class SkillManager : MonoBehaviour
     [Header("配置")]
     [Tooltip("在检视面板中拖入一个技能资产文件来进行调试")]
     public SkillData equippedSkill; // 当前装备的技能
+    public event Action OnSkillTriggered;
 
     // --- 技能状态查询接口 ---
     public bool IsAutoPerfectActive { get; private set; }
@@ -69,7 +71,7 @@ public class SkillManager : MonoBehaviour
         Debug.Log($"<color=lightblue>技能触发: {equippedSkill.skillName}!</color>");
         isSkillReady = false; // 技能进入使用中/冷却中状态
 
-        // 启动一个协程来处理技能的持续时间
+        OnSkillTriggered?.Invoke();
         StartCoroutine(SkillCoroutine(equippedSkill));
     }
 

@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using TMPro;
 using System.Collections;
+using System;
 using UnityEngine.Audio; // 需要这个来控制AudioMixer
 
 public class PauseManager : MonoBehaviour
@@ -26,6 +27,8 @@ public class PauseManager : MonoBehaviour
     public AudioClip countdownTickSound;
     public AudioClip countdownGoSound;
     private AudioSource uiAudioSource; // 用于播放UI音效
+
+    public static event Action<bool> OnPauseStateChanged;
 
     // 内部状态
     private PlayerInputActions playerInput;
@@ -88,6 +91,8 @@ public class PauseManager : MonoBehaviour
         if (countdownText.gameObject.activeInHierarchy) return;
 
         IsPaused = !IsPaused;
+
+        OnPauseStateChanged?.Invoke(IsPaused);
 
         if (IsPaused)
         {

@@ -42,13 +42,17 @@ public class GameManager : MonoBehaviour
         if (soundFeedbackManager != null) soundFeedbackManager.Initialize();
 
         // 3. 开始游戏流程
-        chartLoader.LoadChart(testChartFileName);
-        noteSpawner.StartSpawning();
-
-        float bpm = chartLoader.CurrentChart.bpm;
-        timingManager.PlaySong(testSong, bpm);
-
-        skillManager.Initialize();
+        LevelData currentLevel = GameFlowManager.CurrentLevelData;
+        if (currentLevel != null)
+        {
+            chartLoader.LoadChart(currentLevel.chartFileName);
+            noteSpawner.StartSpawning();
+            timingManager.PlaySong(currentLevel.musicClip, chartLoader.CurrentChart.bpm);
+        }
+        else
+        {
+            Debug.LogError("无法开始游戏：没有找到当前关卡数据！");
+        }
     }
 
     private void HandleGameOver()

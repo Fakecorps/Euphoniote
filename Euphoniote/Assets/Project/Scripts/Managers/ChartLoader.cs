@@ -1,86 +1,138 @@
-// _Project/Scripts/Managers/ChartLoader.cs (重构最终版)
+// _Project/Scripts/Managers/ChartLoader.cs (最终精简版)
 
 using UnityEngine;
-using System.IO;
 using Newtonsoft.Json;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine.Networking;
+using System.IO; // Path.Combine 需要
 
 public class ChartLoader : MonoBehaviour
 {
     public ChartData CurrentChart { get; private set; }
+    public event System.Action OnChartLoadComplete;
 
+    /// <summary>
+    /// 公开的加载入口，启动协程来异步加载谱面。
+    /// </summary>
+    /// <param name="chartFileName">谱面文件名，例如 "Sample.json"</param>
     public void LoadChart(string chartFileName)
+    {
+        StartCoroutine(LoadChartCoroutine(chartFileName));
+    }
+
+    /// <summary>
+    /// 使用 UnityWebRequest 异步加载谱面文件的协程，兼容所有平台。
+    /// </summary>
+    private IEnumerator LoadChartCoroutine(string chartFileName)
     {
         string path = Path.Combine(Application.streamingAssetsPath, "Charts", chartFileName);
 
-        if (File.Exists(path))
+        // 为PC/Editor平台添加 "file://" 协议头，以确保 UnityWebRequest 能正确处理本地文件路径
+        if (Application.platform != RuntimePlatform.WebGLPlayer && Application.platform != RuntimePlatform.Android)
         {
-            string json = File.ReadAllText(path);
-            BeatmapData beatmap = JsonConvert.DeserializeObject<BeatmapData>(json);
+            path = "file://" + path;
+        }
+
+        UnityWebRequest request = UnityWebRequest.Get(path);
+        yield return request.SendWebRequest();
+
+        if (request.result == UnityWebRequest.Result.Success)
+        {
+            string json = request.downloadHandler.text;
+            // 反序列化为 SimpleBeatmapData，它使用 int[] 列表
+            SimpleBeatmapData beatmap = JsonConvert.DeserializeObject<SimpleBeatmapData>(json);
             if (beatmap == null)
             {
                 Debug.LogError($"无法解析谱面文件: {chartFileName}", this.gameObject);
-                return;
+                yield break;
             }
 
+            // 将解析出的数据转换为游戏运行时使用的 ChartData 格式
             CurrentChart = ConvertBeatmapToChart(beatmap);
+            Debug.Log($"谱面 '{CurrentChart.songName}' (最终精简版) 加载并转换成功，包含 {CurrentChart.notes.Count} 个音符。");
 
-            Debug.Log($"谱面 '{CurrentChart.songName}' 加载并转换成功，包含 {CurrentChart.notes.Count} 个音符。");
+            // 广播事件，通知其他系统（如GameManager）加载已完成
+            OnChartLoadComplete?.Invoke();
         }
         else
         {
-            Debug.LogError($"找不到谱面文件: {path}", this.gameObject);
+            Debug.LogError($"找不到或无法加载谱面文件: {path}\n错误: {request.error}", this.gameObject);
         }
     }
 
-    private ChartData ConvertBeatmapToChart(BeatmapData beatmap)
+    /// <summary>
+    /// 将 SimpleBeatmapData (谱面蓝图) 转换为 ChartData (可执行的游戏计划)。
+    /// 这个方法是读谱器的核心翻译逻辑。
+    /// </summary>
+    private ChartData ConvertBeatmapToChart(SimpleBeatmapData beatmap)
     {
         ChartData chart = new ChartData();
         chart.songName = beatmap.songName;
         chart.bpm = beatmap.bpm;
-        chart.notes = new System.Collections.Generic.List<NoteData>();
+        chart.notes = new List<NoteData>();
 
         float secPerBeat = 60f / beatmap.bpm;
+        float secPerSubdivision = secPerBeat / beatmap.ticksPerBeat;
 
         foreach (var beatNote in beatmap.notes)
         {
+            // 安全检查：一个音符至少需要5个元素
+            if (beatNote.Length < 5) continue;
+
             NoteData note = new NoteData();
 
-            // --- 【核心转换逻辑重构】 ---
+            // --- 前5个元素是所有音符共有的 ---
+            int beat = beatNote[0];
+            int subdivision = beatNote[1];
+            StrumType strumType = (StrumType)beatNote[2];
+            int fretMask = beatNote[3];
+            bool isSpecial = beatNote[4] == 1;
 
-            // 1. 计算音符的开始总拍数 (startTotalBeat)
-            float startTotalBeat = (beatNote.beat - 1) + ((float)beatNote.subdivision / beatmap.ticksPerBeat);
+            // 1. 计算时间 (time)
+            float totalSubdivisions = (beat - 1) * beatmap.ticksPerBeat + subdivision;
+            note.time = beatmap.offset + totalSubdivisions * secPerSubdivision;
 
-            // 2. 根据开始总拍数，计算开始时间 time (秒)
-            note.time = beatmap.offset + startTotalBeat * secPerBeat;
+            // 2. 转换 StrumType, FretMask, isSpecial
+            note.strumType = strumType;
+            note.requiredFrets = DecodeFretMask(fretMask);
+            note.isSpecial = isSpecial;
 
-            // 3. 检查这是否是一个HoldNote
-            if (beatNote.endBeat > 0) // 我们约定endBeat > 0 表示是HoldNote
+            // --- 检查数组长度来判断是Tap还是Hold ---
+            if (beatNote.Length >= 6)
             {
-                // 4. 计算音符的结束总拍数 (endTotalBeat)
-                float endTotalBeat = (beatNote.endBeat - 1) + ((float)beatNote.endSubdivision / beatmap.ticksPerBeat);
-
-                // 5. 根据结束总拍数，计算结束时间 endTime (秒)
-                float endTime = beatmap.offset + endTotalBeat * secPerBeat;
-
-                // 6. duration = 结束时间 - 开始时间
-                note.duration = endTime - note.time;
+                // 这是 HoldNote，第6个元素是它的持续时间（以细分刻度为单位）
+                int durationInSubdivisions = beatNote[5];
+                note.duration = durationInSubdivisions * secPerSubdivision;
             }
             else
             {
-                // 如果是TapNote，duration为0
+                // 这是 TapNote，持续时间为0
                 note.duration = 0;
             }
-
-            // --- 转换结束 ---
-
-            // 复制其他数据
-            note.requiredFrets = beatNote.requiredFrets;
-            note.strumType = beatNote.strumType;
-            note.isSpecial = beatNote.isSpecial;
 
             chart.notes.Add(note);
         }
 
         return chart;
+    }
+
+    /// <summary>
+    /// 将一个整数位掩码 (FretMask) 解码为 FretKey 的列表。
+    /// </summary>
+    /// <param name="mask">代表和弦的整数</param>
+    /// <returns>一个包含所需FretKey的列表</returns>
+    private List<FretKey> DecodeFretMask(int mask)
+    {
+        var frets = new List<FretKey>();
+        // 使用位与 (&) 运算来检查每一位是否为1
+        // Q:1, W:2, E:4, A:8, S:16, D:32
+        if ((mask & 1) != 0) frets.Add(FretKey.Q);
+        if ((mask & 2) != 0) frets.Add(FretKey.W);
+        if ((mask & 4) != 0) frets.Add(FretKey.E);
+        if ((mask & 8) != 0) frets.Add(FretKey.A);
+        if ((mask & 16) != 0) frets.Add(FretKey.S);
+        if ((mask & 32) != 0) frets.Add(FretKey.D);
+        return frets;
     }
 }

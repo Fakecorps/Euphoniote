@@ -1,4 +1,4 @@
-// _Project/Scripts/Managers/PauseManager.cs
+// _Project/Scripts/Managers/PauseManager.cs (最终修改版 - 图片倒计时 & 返回选关)
 
 using UnityEngine;
 using UnityEngine.UI;
@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 using TMPro;
 using System.Collections;
 using System;
-using UnityEngine.Audio; // 需要这个来控制AudioMixer
+using UnityEngine.Audio;
 
 public class PauseManager : MonoBehaviour
 {
@@ -19,49 +19,51 @@ public class PauseManager : MonoBehaviour
     public Button restartButton;
     public Button quitButton;
     public Slider volumeSlider;
-    public TextMeshProUGUI countdownText;
+    public Image blackenImage; // 我保留了这个引用，以防你需要它
+
+    [Header("倒计时UI (图片版)")] // --- 修改部分 ---
+    public Image countdownImage;        // 拖入新的 CountdownImage
+    public Sprite countdownSprite3;     // 拖入 "3" 的图片
+    public Sprite countdownSprite2;     // 拖入 "2" 的图片
+    public Sprite countdownSprite1;     // 拖入 "1" 的图片
 
     [Header("音频设置")]
-    public AudioMixer mainAudioMixer; // 拖入你的主AudioMixer
-    public string masterVolumeParameter = "MasterVolume"; // AudioMixer中暴露的参数名
+    public AudioMixer mainAudioMixer;
+    public string masterVolumeParameter = "MasterVolume";
     public AudioClip countdownTickSound;
     public AudioClip countdownGoSound;
-    private AudioSource uiAudioSource; // 用于播放UI音效
+    private AudioSource uiAudioSource;
 
     public static event Action<bool> OnPauseStateChanged;
-
-    // 内部状态
     private PlayerInputActions playerInput;
 
     void Awake()
     {
         if (Instance == null) { Instance = this; }
         else { Destroy(gameObject); }
-
         playerInput = new PlayerInputActions();
-
-        // 为自己添加一个AudioSource组件
         uiAudioSource = gameObject.AddComponent<AudioSource>();
-        uiAudioSource.outputAudioMixerGroup = mainAudioMixer.FindMatchingGroups("UI")[0]; // 假设你有UI混音组
+        if (mainAudioMixer != null)
+        {
+            AudioMixerGroup[] uiGroups = mainAudioMixer.FindMatchingGroups("UI");
+            if (uiGroups.Length > 0) uiAudioSource.outputAudioMixerGroup = uiGroups[0];
+            else Debug.LogError("在 AudioMixer 中找不到名为 'UI' 的混音组！", this.gameObject);
+        }
     }
 
     void Start()
     {
-        // 确保UI初始状态正确
         pauseMenuPanel.SetActive(false);
-        countdownText.gameObject.SetActive(false);
+        if (countdownImage != null) countdownImage.gameObject.SetActive(false); // --- 修改部分 ---
+        if (blackenImage != null) blackenImage.gameObject.SetActive(false);
         IsPaused = false;
-        Time.timeScale = 1f; // 确保游戏开始时时间是正常流逝的
+        Time.timeScale = 1f;
 
-        // 绑定按钮事件
         resumeButton.onClick.AddListener(TogglePause);
         restartButton.onClick.AddListener(RestartGame);
-        quitButton.onClick.AddListener(QuitGame);
-
-        // 绑定滑条事件
+        quitButton.onClick.AddListener(QuitToLevelSelect); // --- 修改部分 ---
         volumeSlider.onValueChanged.AddListener(SetMasterVolume);
 
-        // 初始化滑条的值
         if (PlayerPrefs.HasKey(masterVolumeParameter))
         {
             float savedVolume = PlayerPrefs.GetFloat(masterVolumeParameter);
@@ -70,7 +72,7 @@ public class PauseManager : MonoBehaviour
         }
         else
         {
-            volumeSlider.value = 1f; // 默认满音量
+            volumeSlider.value = 1f;
         }
     }
 
@@ -87,91 +89,94 @@ public class PauseManager : MonoBehaviour
 
     public void TogglePause()
     {
-        // 如果倒计时正在进行，则不允许切换暂停状态
-        if (countdownText.gameObject.activeInHierarchy) return;
+        if (countdownImage != null && countdownImage.gameObject.activeInHierarchy) return; // --- 修改部分 ---
 
         IsPaused = !IsPaused;
-
         OnPauseStateChanged?.Invoke(IsPaused);
 
-        if (IsPaused)
-        {
-            PauseGame();
-        }
-        else
-        {
-            ResumeGame();
-        }
+        if (IsPaused) { PauseGame(); }
+        else { ResumeGame(); }
     }
 
     private void PauseGame()
     {
         pauseMenuPanel.SetActive(true);
-        Time.timeScale = 0f; // 暂停游戏时间！
-        // 暂停音乐
-        if (TimingManager.Instance != null)
-        {
-            TimingManager.Instance.musicSource.Pause();
-        }
+        if (blackenImage != null) blackenImage.gameObject.SetActive(true);
+        Time.timeScale = 0f;
+        if (TimingManager.Instance != null) TimingManager.Instance.musicSource.Pause();
     }
 
     private void ResumeGame()
     {
         pauseMenuPanel.SetActive(false);
+        if (blackenImage != null) blackenImage.gameObject.SetActive(false);
         StartCoroutine(ResumeCountdownCoroutine());
     }
 
+    // --- 核心修改：倒计时协程 ---
     private IEnumerator ResumeCountdownCoroutine()
     {
-        countdownText.gameObject.SetActive(true);
+        if (countdownImage == null)
+        {
+            // 如果没有设置倒计时图片，直接恢复游戏以防卡住
+            Debug.LogWarning("倒计时图片未设置，直接恢复游戏。");
+            Time.timeScale = 1f;
+            if (TimingManager.Instance != null) TimingManager.Instance.musicSource.UnPause();
+            yield break;
+        }
 
-        countdownText.text = "3";
-        if (countdownTickSound != null) uiAudioSource.PlayOneShot(countdownTickSound);
-        yield return new WaitForSecondsRealtime(1f); // 使用真实时间，不受Time.timeScale影响
+        countdownImage.gameObject.SetActive(true);
 
-        countdownText.text = "2";
+        // 3
+        countdownImage.sprite = countdownSprite3;
+        countdownImage.SetNativeSize(); // 自动调整Image大小以匹配图片原始比例
         if (countdownTickSound != null) uiAudioSource.PlayOneShot(countdownTickSound);
         yield return new WaitForSecondsRealtime(1f);
 
-        countdownText.text = "1";
+        // 2
+        countdownImage.sprite = countdownSprite2;
+        countdownImage.SetNativeSize();
         if (countdownTickSound != null) uiAudioSource.PlayOneShot(countdownTickSound);
         yield return new WaitForSecondsRealtime(1f);
 
-        countdownText.gameObject.SetActive(false);
+        // 1
+        countdownImage.sprite = countdownSprite1;
+        countdownImage.SetNativeSize();
+        if (countdownTickSound != null) uiAudioSource.PlayOneShot(countdownTickSound);
+        yield return new WaitForSecondsRealtime(1f);
+
+        countdownImage.gameObject.SetActive(false);
         if (countdownGoSound != null) uiAudioSource.PlayOneShot(countdownGoSound);
 
-        Time.timeScale = 1f; // 恢复游戏时间！
-        // 恢复音乐
-        if (TimingManager.Instance != null)
-        {
-            TimingManager.Instance.musicSource.UnPause();
-        }
+        Time.timeScale = 1f;
+        if (TimingManager.Instance != null) TimingManager.Instance.musicSource.UnPause();
     }
 
     public void RestartGame()
     {
-        // 确保在加载场景前恢复时间流逝，否则场景加载可能会出问题
         Time.timeScale = 1f;
+        IsPaused = false;
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
-    public void QuitGame()
+    public void QuitToLevelSelect()
     {
-        Debug.Log("Quitting game...");
-        Application.Quit();
-        // 在编辑器中，上面这行可能无效，可以加上下面这行
-#if UNITY_EDITOR
-        UnityEditor.EditorApplication.isPlaying = false;
-#endif
+        Time.timeScale = 1f;
+        IsPaused = false;
+        OnPauseStateChanged?.Invoke(IsPaused);
+        if (GameFlowManager.Instance != null)
+        {
+            GameFlowManager.Instance.GoToLevelSelect();
+        }
+        else
+        {
+            SceneManager.LoadScene("1_LevelSelect");
+        }
     }
 
     public void SetMasterVolume(float value)
     {
-        // AudioMixer使用对数单位(dB)，范围通常是-80到20
-        // 我们需要将滑条的线性值(0-1)转换为对数dB值
-        // Mathf.Log10(value) * 20 是一个标准的转换公式
         mainAudioMixer.SetFloat(masterVolumeParameter, Mathf.Log10(value) * 20);
-        // 保存设置，以便下次启动游戏时加载
         PlayerPrefs.SetFloat(masterVolumeParameter, value);
     }
 }

@@ -14,6 +14,7 @@ public class GameManager : MonoBehaviour
     public SoundFeedbackManager soundFeedbackManager;
     public PauseManager pauseManager;
     public NotePoolManager notePoolManager;
+    public FeedbackManager feedbackManager;
 
     [Header("测试关卡配置")]
     public AudioClip testSong;
@@ -55,6 +56,7 @@ public class GameManager : MonoBehaviour
         if (skillManager != null) skillManager.Initialize();
         if (soundFeedbackManager != null) soundFeedbackManager.Initialize();
         if (judgmentManager != null) judgmentManager.Initialize();
+        if(feedbackManager != null) feedbackManager.Initialize();
         // PauseManager 和 NotePoolManager 的 Start/Awake 会自动初始化，无需手动调用
 
         // --- 异步加载流程 ---

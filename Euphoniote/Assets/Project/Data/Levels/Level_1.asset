@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 95f733cf89bdc1c44926ae2248c0be38, type: 3}
   m_Name: Level_1
   m_EditorClassIdentifier: 
-  storyStart: 
+  storyStart: Debug_Story
   storyEnd: 
   chartFileName: Sample.json
   musicClip: {fileID: 8300000, guid: 572167a2a7bf55b4fa7310bbea6eda49, type: 3}

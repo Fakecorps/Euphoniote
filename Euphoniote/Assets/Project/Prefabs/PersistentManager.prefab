@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 809776064503878908}
   - component: {fileID: 4520070722849169755}
   - component: {fileID: 3420988060502905443}
+  - component: {fileID: 392392688154589800}
   m_Layer: 0
   m_Name: PersistentManager
   m_TagString: Untagged
@@ -58,3 +59,28 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   firstSceneToLoad: 1_LevelSelect
+--- !u!114 &392392688154589800
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3786208117229985015}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f2d5c10db07b689429b63d1b0ff2c2ad, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  storyPanel: {fileID: 0}
+  dialogueUI: {fileID: 0}
+  speakerName: {fileID: 0}
+  speakingContent: {fileID: 0}
+  nameTable: {fileID: 0}
+  textTyping: {fileID: 0}
+  charactor1: {fileID: 0}
+  charactor2: {fileID: 0}
+  bgImg: {fileID: 0}
+  choicePanel: {fileID: 0}
+  optionButtonPrefab: {fileID: 0}
+  buttonGroup: {fileID: 0}
+  backgroundMusic: {fileID: 0}

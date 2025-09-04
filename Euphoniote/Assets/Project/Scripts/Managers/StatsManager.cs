@@ -57,12 +57,15 @@ public class StatsManager : MonoBehaviour
         {
             case JudgmentType.Perfect:
                 AddToScore(JudgmentManager.Instance.perfectScore);
+                IncrementCombo();
                 break;
             case JudgmentType.Great:
                 AddToScore(JudgmentManager.Instance.greatScore);
+                IncrementCombo();
                 break;
             case JudgmentType.Good:
                 AddToScore(JudgmentManager.Instance.goodScore);
+                IncrementCombo();
                 break;
             case JudgmentType.HoldHead: // <<-- 确保将 HoldHead 添加到增加 Combo 的行列
                 IncrementCombo();

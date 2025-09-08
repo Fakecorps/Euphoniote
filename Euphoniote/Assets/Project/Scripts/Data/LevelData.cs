@@ -6,8 +6,8 @@ using UnityEngine;
 public class LevelData : ScriptableObject
 {
     [Header("剧情")]
-    public string storyStart; // 游戏前剧情文件名
-    public string storyEnd;   // 游戏后剧情文件名
+    public string storyStart;
+    public string storyEnd;
 
     [Header("音游")]
     public string chartFileName;

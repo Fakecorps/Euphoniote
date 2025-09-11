@@ -1,4 +1,4 @@
-// _Project/Scripts/Managers/TimingManager.cs (增强版)
+// _Project/Scripts/Managers/TimingManager.cs (最终修改版 - 增加结束检测)
 
 using UnityEngine;
 
@@ -8,25 +8,20 @@ public class TimingManager : MonoBehaviour
 
     [Header("组件引用")]
     public AudioSource musicSource;
+    public GameManager gameManager; // <<-- 新增：对 GameManager 的引用
 
     [Header("歌曲信息")]
     [Tooltip("当前歌曲的BPM (每分钟节拍数)")]
-    public float bpm = 120f; // 默认值，应该由ChartLoader在加载谱面时设置
+    public float bpm = 120f;
 
     // --- 核心属性 ---
-    /// <summary>
-    /// 获取当前歌曲的播放时间（秒）。
-    /// </summary>
     public float SongPosition => musicSource.time;
-
-    /// <summary>
-    /// 获取当前歌曲进行到了第几拍。这是一个浮点数，可以精确到小数拍。
-    /// </summary>
     public float SongPositionInBeats { get; private set; }
 
     // --- 内部变量 ---
-    private float secPerBeat; // 每一拍持续多少秒
-    private float lastBeat = 0f; // 上一次触发节拍combo的拍数
+    private float secPerBeat;
+    private float lastBeat = 0f;
+    private bool songHasStarted = false; // <<-- 新增：一个状态标志，防止在歌曲开始前就误判结束
 
     void Awake()
     {
@@ -36,10 +31,31 @@ public class TimingManager : MonoBehaviour
 
     void Update()
     {
+        if (!songHasStarted) return; // 如果歌曲还没开始播放，就什么都不做
+
         if (musicSource.isPlaying)
         {
             // 持续计算当前在第几拍
             SongPositionInBeats = SongPosition / secPerBeat;
+        }
+        else
+        {
+            // --- 核心修改点：检测歌曲是否结束 ---
+            // 如果 songHasStarted 为 true，但 isPlaying 变为 false，
+            // 这就意味着歌曲刚刚播放完毕。
+
+            // 确保只调用一次
+            songHasStarted = false;
+
+            if (gameManager != null)
+            {
+                // 通知 GameManager 歌曲已结束
+                gameManager.OnSongFinished();
+            }
+            else
+            {
+                Debug.LogError("TimingManager 中的 GameManager 引用没有设置！无法报告歌曲结束。", this.gameObject);
+            }
         }
     }
 
@@ -48,42 +64,44 @@ public class TimingManager : MonoBehaviour
     /// </summary>
     public void PlaySong(AudioClip clip, float chartBpm)
     {
+        if (musicSource == null)
+        {
+            Debug.LogError("TimingManager 的 musicSource 没有被赋值！", this.gameObject);
+            return;
+        }
+
         musicSource.clip = clip;
         this.bpm = chartBpm;
 
-        // 计算每一拍的秒数
         secPerBeat = 60f / bpm;
 
-        // 重置状态
         SongPositionInBeats = 0;
         lastBeat = 0;
 
         musicSource.Play();
+        songHasStarted = true; // <<-- 在这里标记歌曲已开始播放
     }
 
-    /// <summary>
-    /// 【新增】检查并获取自上次调用以来经过了多少个整数节拍。
-    /// 用于在HoldNote期间增加Combo。
-    /// </summary>
-    /// <returns>经过的节拍数</returns>
     public int GetPassedBeats()
     {
+        if (!songHasStarted) return 0;
+
         int currentBeatInt = Mathf.FloorToInt(SongPositionInBeats);
         int lastBeatInt = Mathf.FloorToInt(lastBeat);
 
         if (currentBeatInt > lastBeatInt)
         {
             int passedBeats = currentBeatInt - lastBeatInt;
-            lastBeat = SongPositionInBeats; // 更新上一次的拍数
+            lastBeat = SongPositionInBeats;
             return passedBeats;
         }
-
-        return 0; // 没有经过新的整数拍
+        return 0;
     }
 
     public void ResetBeatTracking()
     {
-        // 将 lastBeat 更新为当前的精确拍数
+        // 如果音乐还没开始，就不要重置 beat tracking，防止出错
+        if (!songHasStarted) return;
         lastBeat = SongPositionInBeats;
     }
 }

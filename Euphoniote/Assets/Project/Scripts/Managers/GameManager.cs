@@ -16,10 +16,6 @@ public class GameManager : MonoBehaviour
     public PauseManager pauseManager;
     public NotePoolManager notePoolManager;
 
-    // --- 我们不再需要这些测试字段了 ---
-    // public AudioClip testSong;
-    // public string testChartFileName;
-
     private bool isGameOver = false;
 
     void Awake()
@@ -41,14 +37,11 @@ public class GameManager : MonoBehaviour
         isGameOver = false;
         InitializeAllManagers();
 
-        // --- 核心修改：从 GameFlowManager 获取当前关卡数据 ---
         LevelData currentLevel = GameFlowManager.CurrentLevelData;
         if (currentLevel != null)
         {
             Debug.Log($"正在准备加载关卡: {currentLevel.name}");
-            // 订阅加载完成事件
             chartLoader.OnChartLoadComplete += HandleChartLoaded;
-            // 使用 LevelData 中的谱面文件名开始加载
             chartLoader.LoadChart(currentLevel.chartFileName);
         }
         else
@@ -70,7 +63,6 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log("GameManager 收到谱面加载完成信号，正在启动游戏核心玩法...");
 
-        // --- 核心修改：使用 LevelData 中的音乐文件 ---
         LevelData currentLevel = GameFlowManager.CurrentLevelData;
 
         if (noteSpawner != null)
@@ -81,7 +73,6 @@ public class GameManager : MonoBehaviour
         if (timingManager != null && chartLoader.CurrentChart != null && currentLevel.musicClip != null)
         {
             float bpm = chartLoader.CurrentChart.bpm;
-            // 使用 LevelData 中配置的音乐来播放
             timingManager.PlaySong(currentLevel.musicClip, bpm);
         }
         else
@@ -90,11 +81,14 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 当玩家血量耗尽时，由 StatsManager 的 OnGameOver 事件调用
+    /// </summary>
     private void HandleGameOver()
     {
         if (isGameOver) return;
         isGameOver = true;
-        Debug.Log("GameManager 收到了游戏结束信号，正在执行结束流程...");
+        Debug.Log("GameManager 收到了游戏结束信号（失败），正在执行结束流程...");
 
         if (timingManager != null && timingManager.musicSource != null)
         {
@@ -105,7 +99,36 @@ public class GameManager : MonoBehaviour
             noteSpawner.enabled = false;
         }
 
-        // 游戏结束后，通知 GameFlowManager
+        // 打包数据，标记为“失败”
+        statsManager.FinalizeResults(false);
+
+        // 通知流程管理器，游戏已结束
+        if (GameFlowManager.Instance != null)
+        {
+            GameFlowManager.Instance.GameplayFinished();
+        }
+    }
+
+    /// <summary>
+    /// 当歌曲正常播放完毕时，应该被调用。
+    /// 你需要从 TimingManager 中调用此方法。
+    /// </summary>
+    public void OnSongFinished()
+    {
+        if (isGameOver) return;
+        isGameOver = true;
+        Debug.Log("歌曲播放完毕（成功），正在执行结束流程...");
+
+        // 停止 note 生成等
+        if (noteSpawner != null)
+        {
+            noteSpawner.enabled = false;
+        }
+
+        // 打包数据，标记为“成功”
+        statsManager.FinalizeResults(true);
+
+        // 通知流程管理器，游戏已结束
         if (GameFlowManager.Instance != null)
         {
             GameFlowManager.Instance.GameplayFinished();

@@ -3678,6 +3678,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   musicSource: {fileID: 1489414086}
+  gameManager: {fileID: 1270630779}
   bpm: 123
 --- !u!224 &1521238964 stripped
 RectTransform:

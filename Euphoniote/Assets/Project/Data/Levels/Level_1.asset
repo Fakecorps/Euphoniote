@@ -15,4 +15,4 @@ MonoBehaviour:
   storyStart: Debug_Story
   storyEnd: 
   chartFileName: Sample.json
-  musicClip: {fileID: 8300000, guid: f9301a53269ee9d4f8c9a8279fd0a887, type: 3}
+  musicClip: {fileID: 8300000, guid: d925be5b1dc68ca409e08a61d4d5e31c, type: 3}

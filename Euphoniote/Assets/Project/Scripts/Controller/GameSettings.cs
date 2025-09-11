@@ -38,3 +38,14 @@ public static class GameSettings
         SelectedSkill = skill;
     }
 }
+
+public static class ResultsData
+{
+    public static bool GameWon { get; set; }
+    public static long FinalScore { get; set; }
+    public static int PerfectCount { get; set; }
+    public static int GreatCount { get; set; }
+    public static int GoodCount { get; set; }
+    public static int MissCount { get; set; }
+    public static int MaxCombo { get; set; }
+}

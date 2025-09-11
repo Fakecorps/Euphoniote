@@ -1,11 +1,10 @@
-// _Project/Scripts/Managers/NoteSpawner.cs
+// _Project/Scripts/Managers/NoteSpawner.cs (最终修复版 - 统一速度计算)
 
 using UnityEngine;
 using System.Collections.Generic;
 
 public class NoteSpawner : MonoBehaviour
 {
-    // 添加一个单例，方便 JudgmentManager 获取 judgmentLineX
     public static NoteSpawner Instance { get; private set; }
 
     [Header("Prefabs")]
@@ -15,7 +14,8 @@ public class NoteSpawner : MonoBehaviour
     [Header("引用")]
     public ChartLoader chartLoader;
 
-    [Header("轨道与生成设置 (手动配置)")]
+    [Header("轨道与生成设置")]
+    [Tooltip("基础滚动速度，将与玩家设置的Hi-Speed相乘")]
     public float scrollSpeed = 5f;
     public float judgmentLineX = -6f;
     public float spawnX = 20f;
@@ -23,21 +23,14 @@ public class NoteSpawner : MonoBehaviour
 
     private List<NoteData> notesToSpawn;
     private int nextNoteIndex = 0;
-    private float spawnAheadTime;
+
+    // --- 我们将不再缓存 spawnAheadTime，而是在Update中实时计算 ---
+    // private float spawnAheadTime; 
 
     void Awake()
     {
         if (Instance == null) { Instance = this; }
         else { Destroy(gameObject); }
-    }
-
-    void Start()
-    {
-        spawnAheadTime = (spawnX - judgmentLineX) / scrollSpeed;
-        if (spawnAheadTime <= 0)
-        {
-            Debug.LogError("Spawn Ahead Time 计算结果为0或负数！请确保 Spawn X 远大于 Judgment Line X。", this.gameObject);
-        }
     }
 
     public void StartSpawning()
@@ -48,62 +41,76 @@ public class NoteSpawner : MonoBehaviour
             return;
         }
 
-        // 深度复制逻辑
-        notesToSpawn = new List<NoteData>();
-        foreach (var originalNoteData in chartLoader.CurrentChart.notes)
-        {
-            NoteData newNoteData = new NoteData();
-            newNoteData.time = originalNoteData.time;
-            newNoteData.duration = originalNoteData.duration;
-            newNoteData.isSpecial = originalNoteData.isSpecial;
-            newNoteData.strumType = originalNoteData.strumType;
-            if (originalNoteData.requiredFrets != null)
-                newNoteData.requiredFrets = new List<FretKey>(originalNoteData.requiredFrets);
-            else
-                newNoteData.requiredFrets = new List<FretKey>();
-            notesToSpawn.Add(newNoteData);
-        }
-
+        notesToSpawn = new List<NoteData>(chartLoader.CurrentChart.notes);
         notesToSpawn.Sort((a, b) => a.time.CompareTo(b.time));
         nextNoteIndex = 0;
+
+        Debug.Log($"NoteSpawner 已准备就绪，Hi-Speed: {GameSettings.HiSpeed}");
     }
 
     void Update()
     {
+        // 如果 TimingManager 不存在或音乐未播放，则不执行任何操作
+        if (TimingManager.Instance == null || !TimingManager.Instance.musicSource.isPlaying)
+        {
+            return;
+        }
+
         if (notesToSpawn == null || nextNoteIndex >= notesToSpawn.Count)
         {
             return;
         }
 
+        // --- 核心修改：在 Update 中实时计算所有需要的参数 ---
+        float finalScrollSpeed = this.scrollSpeed * GameSettings.HiSpeed*0.1f;
+        float spawnAheadTime = (spawnX - judgmentLineX) / finalScrollSpeed;
+
+        if (spawnAheadTime <= 0)
+        {
+            // 如果计算出错，立即停止以防无限生成
+            Debug.LogError("Spawn Ahead Time 计算结果为0或负数！", this.gameObject);
+            this.enabled = false; // 禁用自身
+            return;
+        }
+
         float songPosition = TimingManager.Instance.SongPosition;
 
-        if (songPosition >= notesToSpawn[nextNoteIndex].time - spawnAheadTime)
+        // --- 核心修改：确保只有在需要时才生成音符 ---
+        // 增加一个检查，确保我们不会生成已经“过时”的音符
+        // 循环检查，以处理高密度谱面或卡顿时一次性生成多个音符的情况
+        while (nextNoteIndex < notesToSpawn.Count &&
+               songPosition >= notesToSpawn[nextNoteIndex].time - spawnAheadTime)
         {
             NoteData noteToSpawnData = notesToSpawn[nextNoteIndex];
-            Vector3 spawnPosition = new Vector3(spawnX, spawnY, -0.1f);
+
+            // 安全检查：如果音符已经严重超时，就直接跳过它，不生成
+            if (noteToSpawnData.time < songPosition)
+            {
+                Debug.LogWarning($"跳过一个已超时的音符，时间: {noteToSpawnData.time}");
+                nextNoteIndex++;
+                continue; // 继续检查下一个
+            }
+
+            Vector3 spawnPosition = new Vector3(spawnX, spawnY, 0);
             GameObject noteObject;
 
             if (noteToSpawnData.duration > 0)
             {
                 noteObject = NotePoolManager.Instance.GetFromPool("HoldNote");
-                if (noteObject == null) return; // 安全检查，防止标签写错
-
+                if (noteObject == null) { nextNoteIndex++; continue; }
                 noteObject.transform.position = spawnPosition;
-                noteObject.transform.rotation = Quaternion.identity;
 
                 HoldNoteController controller = noteObject.GetComponent<HoldNoteController>();
-                controller.Initialize(noteToSpawnData, scrollSpeed, judgmentLineX);
+                controller.Initialize(noteToSpawnData, finalScrollSpeed, judgmentLineX);
             }
             else
             {
                 noteObject = NotePoolManager.Instance.GetFromPool("TapNote");
-                if (noteObject == null) return; // 安全检查
-
+                if (noteObject == null) { nextNoteIndex++; continue; }
                 noteObject.transform.position = spawnPosition;
-                noteObject.transform.rotation = Quaternion.identity;
 
                 NoteController controller = noteObject.GetComponent<NoteController>();
-                controller.Setup(scrollSpeed, judgmentLineX);
+                controller.Setup(finalScrollSpeed, judgmentLineX);
                 controller.Initialize(noteToSpawnData);
             }
 

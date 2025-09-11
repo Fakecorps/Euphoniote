@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: da4b6d81aa316d14ca0d8e21a7be2628, type: 3}
   m_Name: AutoPerfectSkill
   m_EditorClassIdentifier: 
-  skillName: AutoPerfectSkill
+  skillName: "Perfect\u6F14\u594F\u65F6\u95F4"
   description: 
   icon: {fileID: 0}
   effectType: 0

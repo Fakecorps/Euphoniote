@@ -1,4 +1,4 @@
-// _Project/Scripts/Managers/SkillManager.cs
+// _Project/Scripts/Managers/SkillManager.cs (最终版 - 从GameSettings加载)
 
 using UnityEngine;
 using System.Collections;
@@ -8,9 +8,6 @@ public class SkillManager : MonoBehaviour
 {
     public static SkillManager Instance { get; private set; }
 
-    [Header("配置")]
-    [Tooltip("在检视面板中拖入一个技能资产文件来进行调试")]
-    public SkillData equippedSkill; // 当前装备的技能
     public event Action OnSkillTriggered;
 
     // --- 技能状态查询接口 ---
@@ -19,8 +16,8 @@ public class SkillManager : MonoBehaviour
     public bool IsIgnoreFretsActive { get; private set; }
 
     // 内部状态
-    private bool isSkillReady = true; // 简化处理，技能是否可再次触发
-    private float skillCooldown = 5f; // 技能触发后的冷却时间
+    private SkillData equippedSkill; // 改为私有，在Initialize时赋值
+    private bool isSkillActive = false; // 用于防止技能重复触发
 
     void Awake()
     {
@@ -30,19 +27,38 @@ public class SkillManager : MonoBehaviour
 
     public void Initialize()
     {
+        // --- 核心修改：从全局设置中获取玩家选择的技能 ---
+        equippedSkill = GameSettings.SelectedSkill;
+
+        if (equippedSkill != null)
+        {
+            Debug.Log($"<color=cyan>已装备技能: {equippedSkill.skillName}</color>");
+        }
+        else
+        {
+            Debug.Log("<color=cyan>没有装备技能。</color>");
+        }
+
         // 重置所有状态
         IsAutoPerfectActive = false;
         IsPerfectHealActive = false;
         IsIgnoreFretsActive = false;
-        isSkillReady = true;
+        isSkillActive = false;
 
+        // 确保每次游戏开始都重新订阅事件
+        JudgmentManager.OnNoteJudged -= HandleJudgment;
         JudgmentManager.OnNoteJudged += HandleJudgment;
+
         Debug.Log("SkillManager Initialized and Subscribed.");
     }
 
     private void OnDisable()
     {
-        JudgmentManager.OnNoteJudged -= HandleJudgment;
+        // 在对象销毁或场景卸载时取消订阅
+        if (JudgmentManager.Instance != null)
+        {
+            JudgmentManager.OnNoteJudged -= HandleJudgment;
+        }
     }
 
     /// <summary>
@@ -50,8 +66,8 @@ public class SkillManager : MonoBehaviour
     /// </summary>
     private void HandleJudgment(JudgmentResult result)
     {
-        // 检查是否是特殊音符，并且判定成功，并且技能已准备好
-        if (result.IsSpecialNote && result.Type < JudgmentType.Miss && isSkillReady)
+        // 检查是否是特殊音符，并且判定成功，并且技能当前未激活
+        if (result.IsSpecialNote && result.Type < JudgmentType.Miss && !isSkillActive)
         {
             TriggerSkill();
         }
@@ -64,14 +80,17 @@ public class SkillManager : MonoBehaviour
     {
         if (equippedSkill == null)
         {
-            Debug.LogWarning("没有装备技能，无法触发！");
+            // 没有装备技能，直接返回，不打印警告，因为这是正常情况
             return;
         }
 
-        Debug.Log($"<color=lightblue>技能触发: {equippedSkill.skillName}!</color>");
-        isSkillReady = false; // 技能进入使用中/冷却中状态
+        if (isSkillActive) return; // 双重保险
 
+        isSkillActive = true; // 技能进入使用中状态
+
+        Debug.Log($"<color=lightblue>技能触发: {equippedSkill.skillName}!</color>");
         OnSkillTriggered?.Invoke();
+
         StartCoroutine(SkillCoroutine(equippedSkill));
     }
 
@@ -87,10 +106,9 @@ public class SkillManager : MonoBehaviour
         ActivateSkillEffect(skill.effectType, false);
         Debug.Log($"<color=gray>技能结束: {skill.skillName}</color>");
 
-        // 4. 等待冷却时间
-        yield return new WaitForSeconds(skillCooldown);
-        isSkillReady = true; // 技能冷却完毕，可以再次触发
-        Debug.Log("<color=green>技能已准备就绪!</color>");
+        // 技能结束后，状态重置为非激活，可以再次被触发
+        isSkillActive = false;
+        Debug.Log("<color=green>技能效果已结束，可再次触发。</color>");
     }
 
     /// <summary>
@@ -112,7 +130,9 @@ public class SkillManager : MonoBehaviour
         }
     }
 
-    // --- 效果特定方法，供其他系统调用 ---
+    /// <summary>
+    /// 供其他系统调用，获取当前技能的回血量
+    /// </summary>
     public float GetHealAmount()
     {
         if (IsPerfectHealActive && equippedSkill != null)

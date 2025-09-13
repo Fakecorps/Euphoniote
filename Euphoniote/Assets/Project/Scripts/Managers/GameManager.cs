@@ -1,4 +1,4 @@
-// _Project/Scripts/Managers/GameManager.cs (多场景最终版 - 从LevelData加载)
+// _Project/Scripts/Managers/GameManager.cs (最终重构版 - 独立的结束逻辑)
 
 using UnityEngine;
 
@@ -50,6 +50,35 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    void Update()
+    {
+        if (isGameOver || PauseManager.IsPaused || PauseManager.IsCountingDown)
+        {
+            return;
+        }
+
+        if (noteSpawner == null || TimingManager.Instance == null) return;
+
+        // 新的游戏成功结束条件
+        if (noteSpawner.AllNotesSpawned && TimingManager.Instance.SongPosition >= noteSpawner.GameEndTime)
+        {
+            OnSongFinished();
+        }
+
+        if (noteSpawner.AllNotesSpawned && !TimingManager.Instance.musicSource.isPlaying)
+        {
+            // 我们需要一个额外的检查，确保不是在游戏刚开始音乐还没播放时就触发
+            // 检查 SongPosition 是否大于0，可以作为一个简单的启动判断
+            if (TimingManager.Instance.SongPosition > 0)
+            {
+                Debug.LogWarning("音乐提前结束，但所有音符已生成。强制判定为游戏成功。");
+                OnSongFinished();
+                return;
+
+            }
+        }
+    }
+
     private void InitializeAllManagers()
     {
         if (statsManager != null) statsManager.Initialize();
@@ -82,7 +111,7 @@ public class GameManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 当玩家血量耗尽时，由 StatsManager 的 OnGameOver 事件调用
+    /// 当玩家血量耗尽时，由 StatsManager 的 OnGameOver 事件调用 (失败路径)
     /// </summary>
     private void HandleGameOver()
     {
@@ -99,10 +128,8 @@ public class GameManager : MonoBehaviour
             noteSpawner.enabled = false;
         }
 
-        // 打包数据，标记为“失败”
         statsManager.FinalizeResults(false);
 
-        // 通知流程管理器，游戏已结束
         if (GameFlowManager.Instance != null)
         {
             GameFlowManager.Instance.GameplayFinished();
@@ -110,25 +137,21 @@ public class GameManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 当歌曲正常播放完毕时，应该被调用。
-    /// 你需要从 TimingManager 中调用此方法。
+    /// 当 Update 检测到游戏成功完成时调用 (成功路径)
     /// </summary>
     public void OnSongFinished()
     {
         if (isGameOver) return;
         isGameOver = true;
-        Debug.Log("歌曲播放完毕（成功），正在执行结束流程...");
+        Debug.Log("歌曲内容播放完毕（成功），正在执行结束流程...");
 
-        // 停止 note 生成等
         if (noteSpawner != null)
         {
             noteSpawner.enabled = false;
         }
 
-        // 打包数据，标记为“成功”
         statsManager.FinalizeResults(true);
 
-        // 通知流程管理器，游戏已结束
         if (GameFlowManager.Instance != null)
         {
             GameFlowManager.Instance.GameplayFinished();

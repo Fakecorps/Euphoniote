@@ -113,4 +113,11 @@ public class GameFlowManager : MonoBehaviour
         CurrentLevelData = null; // 清理数据
         SceneManager.LoadScene("1_LevelSelect");
     }
+
+    public void ReturnToMainMenu()
+    {
+        Debug.Log("正在返回主菜单...");
+        CurrentLevelData = null;
+        SceneManager.LoadScene("0_MainMenu");
+    }
 }

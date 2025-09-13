@@ -37,6 +37,8 @@ public class PauseManager : MonoBehaviour
     public static event Action<bool> OnPauseStateChanged;
     private PlayerInputActions playerInput;
 
+    public static bool IsCountingDown { get; private set; } = false;
+
     void Awake()
     {
         if (Instance == null) { Instance = this; }
@@ -89,6 +91,9 @@ public class PauseManager : MonoBehaviour
 
     public void TogglePause()
     {
+
+        if (IsCountingDown) return;
+
         if (countdownImage != null && countdownImage.gameObject.activeInHierarchy) return; // --- 修改部分 ---
 
         IsPaused = !IsPaused;
@@ -116,6 +121,9 @@ public class PauseManager : MonoBehaviour
     // --- 核心修改：倒计时协程 ---
     private IEnumerator ResumeCountdownCoroutine()
     {
+
+        IsCountingDown = true;
+
         if (countdownImage == null)
         {
             // 如果没有设置倒计时图片，直接恢复游戏以防卡住
@@ -150,6 +158,8 @@ public class PauseManager : MonoBehaviour
 
         Time.timeScale = 1f;
         if (TimingManager.Instance != null) TimingManager.Instance.musicSource.UnPause();
+
+        IsCountingDown = false;
     }
 
     public void RestartGame()

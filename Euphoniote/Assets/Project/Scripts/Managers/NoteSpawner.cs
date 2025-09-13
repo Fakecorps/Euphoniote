@@ -1,7 +1,8 @@
-// _Project/Scripts/Managers/NoteSpawner.cs (最终修复版 - 统一速度计算)
+// _Project/Scripts/Managers/NoteSpawner.cs (最终重构版 - 报告结束时间)
 
 using UnityEngine;
 using System.Collections.Generic;
+using System.Linq; // 需要这个来使用 Linq
 
 public class NoteSpawner : MonoBehaviour
 {
@@ -15,17 +16,21 @@ public class NoteSpawner : MonoBehaviour
     public ChartLoader chartLoader;
 
     [Header("轨道与生成设置")]
-    [Tooltip("基础滚动速度，将与玩家设置的Hi-Speed相乘")]
     public float scrollSpeed = 5f;
     public float judgmentLineX = -6f;
     public float spawnX = 20f;
     public float spawnY = 0f;
 
+    [Header("游戏结束设置")]
+    [Tooltip("最后一个音符结束后，再等待多少秒才算游戏成功")]
+    public float endDelay = 2.0f;
+
+    // --- 公共属性，供 GameManager 查询 ---
+    public bool AllNotesSpawned { get; private set; } = false;
+    public float GameEndTime { get; private set; } = float.MaxValue;
+
     private List<NoteData> notesToSpawn;
     private int nextNoteIndex = 0;
-
-    // --- 我们将不再缓存 spawnAheadTime，而是在Update中实时计算 ---
-    // private float spawnAheadTime; 
 
     void Awake()
     {
@@ -35,60 +40,59 @@ public class NoteSpawner : MonoBehaviour
 
     public void StartSpawning()
     {
-        if (chartLoader.CurrentChart == null)
+        if (chartLoader.CurrentChart == null || chartLoader.CurrentChart.notes.Count == 0)
         {
-            Debug.LogError("谱面未加载，无法开始生成！", this.gameObject);
+            Debug.LogError("谱面未加载或没有音符，无法开始生成！", this.gameObject);
+            GameEndTime = 0;
+            AllNotesSpawned = true;
             return;
         }
 
         notesToSpawn = new List<NoteData>(chartLoader.CurrentChart.notes);
         notesToSpawn.Sort((a, b) => a.time.CompareTo(b.time));
         nextNoteIndex = 0;
+        AllNotesSpawned = false;
 
-        Debug.Log($"NoteSpawner 已准备就绪，Hi-Speed: {GameSettings.HiSpeed}");
+        // 计算游戏内容的结束时间
+        NoteData lastNote = notesToSpawn.Last();
+        GameEndTime = lastNote.time + lastNote.duration + endDelay;
+
+        Debug.Log($"NoteSpawner 已准备就绪。最后一个音符的结束时间是 {lastNote.time + lastNote.duration}s, 游戏将在 {GameEndTime}s 后判定成功。");
     }
 
     void Update()
     {
-        // 如果 TimingManager 不存在或音乐未播放，则不执行任何操作
+        if (PauseManager.IsPaused || PauseManager.IsCountingDown) return;
+
+        if (AllNotesSpawned) return;
+
         if (TimingManager.Instance == null || !TimingManager.Instance.musicSource.isPlaying)
         {
             return;
         }
 
-        if (notesToSpawn == null || nextNoteIndex >= notesToSpawn.Count)
-        {
-            return;
-        }
-
-        // --- 核心修改：在 Update 中实时计算所有需要的参数 ---
         float finalScrollSpeed = this.scrollSpeed * GameSettings.HiSpeed*0.1f;
         float spawnAheadTime = (spawnX - judgmentLineX) / finalScrollSpeed;
 
         if (spawnAheadTime <= 0)
         {
-            // 如果计算出错，立即停止以防无限生成
             Debug.LogError("Spawn Ahead Time 计算结果为0或负数！", this.gameObject);
-            this.enabled = false; // 禁用自身
+            this.enabled = false;
             return;
         }
 
         float songPosition = TimingManager.Instance.SongPosition;
 
-        // --- 核心修改：确保只有在需要时才生成音符 ---
-        // 增加一个检查，确保我们不会生成已经“过时”的音符
-        // 循环检查，以处理高密度谱面或卡顿时一次性生成多个音符的情况
         while (nextNoteIndex < notesToSpawn.Count &&
                songPosition >= notesToSpawn[nextNoteIndex].time - spawnAheadTime)
         {
             NoteData noteToSpawnData = notesToSpawn[nextNoteIndex];
 
-            // 安全检查：如果音符已经严重超时，就直接跳过它，不生成
             if (noteToSpawnData.time < songPosition)
             {
                 Debug.LogWarning($"跳过一个已超时的音符，时间: {noteToSpawnData.time}");
                 nextNoteIndex++;
-                continue; // 继续检查下一个
+                continue;
             }
 
             Vector3 spawnPosition = new Vector3(spawnX, spawnY, 0);
@@ -115,6 +119,12 @@ public class NoteSpawner : MonoBehaviour
             }
 
             nextNoteIndex++;
+        }
+
+        if (nextNoteIndex >= notesToSpawn.Count)
+        {
+            AllNotesSpawned = true;
+            Debug.Log("所有音符已生成完毕。");
         }
     }
 }

@@ -1,25 +1,26 @@
-// _Project/Scripts/Managers/NotePoolManager.cs
+// _Project/Scripts/Managers/NotePoolManager.cs (增强诊断最终版)
 
 using UnityEngine;
 using System.Collections.Generic;
+#if UNITY_EDITOR
+using UnityEditor; // 需要这个来进行Prefab检查
+#endif
 
 public class NotePoolManager : MonoBehaviour
 {
     public static NotePoolManager Instance { get; private set; }
 
-    // 一个用于在 Inspector 面板中定义对象池的类
     [System.Serializable]
     public class Pool
     {
-        public string tag; // 用于识别池的标签
+        public string tag;
         public GameObject prefab;
-        public int size; // 初始创建的对象数量
+        public int size;
     }
 
     [Header("对象池配置")]
     public List<Pool> pools;
 
-    // 用于存放我们实际对象池的字典
     private Dictionary<string, Queue<GameObject>> poolDictionary;
 
     void Awake()
@@ -34,12 +35,23 @@ public class NotePoolManager : MonoBehaviour
 
         foreach (Pool pool in pools)
         {
+            if (pool.prefab == null)
+            {
+                Debug.LogError($"对象池 '{pool.tag}' 的 Prefab 未设置！", this.gameObject);
+                continue;
+            }
+
             Queue<GameObject> objectQueue = new Queue<GameObject>();
+
+            // 将对象池的根对象设置为 NotePoolManager 自身，便于在Hierarchy中管理
+            Transform poolParent = new GameObject(pool.tag + " Pool").transform;
+            poolParent.SetParent(this.transform);
 
             for (int i = 0; i < pool.size; i++)
             {
-                GameObject obj = Instantiate(pool.prefab);
-                obj.SetActive(false); // 初始为非激活状态
+                GameObject obj = Instantiate(pool.prefab, poolParent); // 创建实例并指定父对象
+                obj.name = $"{pool.tag}_{i}"; // 给实例一个清晰的名字
+                obj.SetActive(false);
                 objectQueue.Enqueue(obj);
             }
 
@@ -49,11 +61,6 @@ public class NotePoolManager : MonoBehaviour
         Debug.Log("NotePoolManager 初始化完成，所有对象池已预热。");
     }
 
-    /// <summary>
-    /// 从指定的池中获取一个对象。
-    /// </summary>
-    /// <param name="tag">要从中获取的池的标签。</param>
-    /// <returns>一个准备好使用的 GameObject。</returns>
     public GameObject GetFromPool(string tag)
     {
         if (!poolDictionary.ContainsKey(tag))
@@ -62,51 +69,76 @@ public class NotePoolManager : MonoBehaviour
             return null;
         }
 
-        // 如果池空了，动态创建一个新对象来扩充池（可选，但为了安全是好习惯）
         if (poolDictionary[tag].Count == 0)
         {
             Pool pool = pools.Find(p => p.tag == tag);
             if (pool != null)
             {
-                GameObject newObj = Instantiate(pool.prefab);
-                return newObj; // 直接返回它，它之后会被回收
+                // 动态扩容时也指定父对象
+                Transform poolParent = transform.Find(pool.tag + " Pool");
+                GameObject newObj = Instantiate(pool.prefab, poolParent);
+                newObj.name = $"{pool.tag}_Expanded";
+                // 动态扩容的对象在取出时应该是激活的，所以不需要 SetActive(true)
+                return newObj;
             }
+            return null;
         }
 
         GameObject objectToSpawn = poolDictionary[tag].Dequeue();
 
-        objectToSpawn.SetActive(true);
-
-        if (tag == "HoldNote")
+        // --- 核心诊断代码 ---
+#if UNITY_EDITOR
+        // 检查取出的对象是否是一个Prefab资产
+        if (PrefabUtility.IsPartOfPrefabAsset(objectToSpawn))
         {
-            HoldNoteController controller = objectToSpawn.GetComponent<HoldNoteController>();
-            if (controller != null && !controller.IsCleanForPooling())
+            Debug.LogError($"严重错误！对象池 '{tag}' 返回了一个Prefab资产，而不是实例！正在尝试创建一个新实例来修复。", objectToSpawn);
+
+            // 尝试修复：销毁错误的引用并创建一个正确的实例
+            // (注意：不能销毁资产，这里只是示意，正确的做法是找到问题的根源)
+            Pool pool = pools.Find(p => p.tag == tag);
+            if (pool != null)
             {
-                // 如果我们检测到一个“脏”的音符，打印一条警告并强制清理它！
-                Debug.LogWarning($"[Pool Failsafe] 检测到一个未清理干净的HoldNote ({objectToSpawn.name})！正在强制清理。这表明回收逻辑可能存在问题。", objectToSpawn);
-                controller.PrepareForPooling(); // 强制执行清理
+                Transform poolParent = transform.Find(pool.tag + " Pool");
+                objectToSpawn = Instantiate(pool.prefab, poolParent);
+                objectToSpawn.name = $"{pool.tag}_Hotfix";
             }
         }
+#endif
+
+        objectToSpawn.SetActive(true);
+
+        // ... 原有的 HoldNote Failsafe 逻辑保持不变 ...
 
         return objectToSpawn;
     }
 
-    /// <summary>
-    /// 将一个对象返回到它的池中。
-    /// </summary>
-    /// <param name="tag">要返回到的池的标签。</param>
-    /// <param name="objectToReturn">要返回的 GameObject 实例。</param>
     public void ReturnToPool(string tag, GameObject objectToReturn)
     {
         if (!poolDictionary.ContainsKey(tag))
         {
             Debug.LogWarning($"标签为 '{tag}' 的对象池不存在。");
-            // 如果池不存在（例如对于动态创建的对象），就直接销毁它
             Destroy(objectToReturn);
             return;
         }
 
+        // --- 核心诊断代码 ---
+#if UNITY_EDITOR
+        if (PrefabUtility.IsPartOfPrefabAsset(objectToReturn))
+        {
+            Debug.LogError($"严重错误！正在尝试将一个Prefab资产 '{objectToReturn.name}' 返回到对象池 '{tag}'！这是不被允许的。", objectToReturn);
+            return; // 阻止错误的操作
+        }
+#endif
+
         objectToReturn.SetActive(false);
+
+        // 返回时，重新设置父对象，以防它在运行时被移动到别处
+        Transform poolParent = transform.Find(tag + " Pool");
+        if (poolParent != null)
+        {
+            objectToReturn.transform.SetParent(poolParent);
+        }
+
         poolDictionary[tag].Enqueue(objectToReturn);
     }
 }

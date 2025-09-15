@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: da4b6d81aa316d14ca0d8e21a7be2628, type: 3}
   m_Name: IgnoreFretsSkill
   m_EditorClassIdentifier: 
-  skillName: "\u5FFD\u89C6\u5DE6\u624B"
-  description: 
-  icon: {fileID: 0}
+  skillName: "\u5E73\u7A33\u53CD\u5E94"
+  description: "\u6280\u80FD\u97F3\u7B26\u952Egreat\u53CA\u4EE5\u4E0A\u89E6\u53D1\uFF0C10\u79D2\u4E0D\u7528\u7BA1\u5DE6\u624B\u5224\u5B9A"
+  icon: {fileID: 21300000, guid: 62cc67b83178c5b4cbaf9fd206c2acd1, type: 3}
   effectType: 2
   duration: 10
   healAmount: 0

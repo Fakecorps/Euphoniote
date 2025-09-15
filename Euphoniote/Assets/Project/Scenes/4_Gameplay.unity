@@ -2732,9 +2732,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   sfxSource: {fileID: 1002515504}
-  perfectSound: {fileID: 8300000, guid: 6c39e3955954a134aa2b9f4802ff18b7, type: 3}
-  greatSound: {fileID: 8300000, guid: 08b4978f78496404d9eb42bd1aeac8a6, type: 3}
-  goodSound: {fileID: 8300000, guid: 7d003d31aa07b1841876cfd42c97d58b, type: 3}
+  perfectSound: {fileID: 8300000, guid: eb9b6115ccf0973458e2e8956d47f3c7, type: 3}
+  greatSound: {fileID: 8300000, guid: 52a3f2558ddd08e44ba730bca68ecb3c, type: 3}
+  goodSound: {fileID: 8300000, guid: 1fa4e5f88bc66f743b91c9ca8433e05d, type: 3}
   missStrumSound: {fileID: 8300000, guid: d603c99d20447264eb9ce6a546c8504f, type: 3}
   pauseSound: {fileID: 8300000, guid: 9a992dee08385e046bb22b69b5b548d6, type: 3}
   skillActivateSound: {fileID: 8300000, guid: 4b9fd4e4b37ce7c48af6213ac6235cda, type: 3}
@@ -3182,6 +3182,7 @@ MonoBehaviour:
   soundFeedbackManager: {fileID: 1002515505}
   pauseManager: {fileID: 123359549}
   notePoolManager: {fileID: 974431584}
+  skillEffectSpawnPoint: {fileID: 660355480686516124, guid: cfd2848b5721cf34895654ff56453900, type: 3}
 --- !u!1 &1333653766
 GameObject:
   m_ObjectHideFlags: 0
@@ -3231,7 +3232,6 @@ MonoBehaviour:
   HaloTransform1: {fileID: 811673158}
   HaloTransform2: {fileID: 1422576247}
   skillEffectPrefab: {fileID: 8570941156418777190, guid: cfd2848b5721cf34895654ff56453900, type: 3}
-  skillEffectSpawnPoint: {fileID: 660355480686516124, guid: cfd2848b5721cf34895654ff56453900, type: 3}
 --- !u!1 &1366306215
 GameObject:
   m_ObjectHideFlags: 0

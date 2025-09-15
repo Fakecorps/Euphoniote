@@ -1,4 +1,4 @@
-// _Project/Scripts/Managers/GameManager.cs (最终重构版 - 独立的结束逻辑)
+// _Project/Scripts/Managers/GameManager.cs (最终版 - 提供场景引用)
 
 using UnityEngine;
 
@@ -15,6 +15,26 @@ public class GameManager : MonoBehaviour
     public SoundFeedbackManager soundFeedbackManager;
     public PauseManager pauseManager;
     public NotePoolManager notePoolManager;
+
+    [Header("场景特定引用")]
+    [Tooltip("在4_Gameplay场景中，拖入技能特效的生成点")]
+    public Transform skillEffectSpawnPoint;
+
+    // --- 新增一个公共静态属性，供 FeedbackManager 查询 ---
+    public static Transform SkillEffectSpawnPoint
+    {
+        get
+        {
+            // 在多场景架构中，最稳妥的方式是查找当前场景中的 GameManager 实例
+            GameManager gm = FindObjectOfType<GameManager>();
+            if (gm != null)
+            {
+                return gm.skillEffectSpawnPoint;
+            }
+            // 如果找不到，返回 null，调用方需要处理这种情况
+            return null;
+        }
+    }
 
     private bool isGameOver = false;
 
@@ -59,23 +79,9 @@ public class GameManager : MonoBehaviour
 
         if (noteSpawner == null || TimingManager.Instance == null) return;
 
-        // 新的游戏成功结束条件
         if (noteSpawner.AllNotesSpawned && TimingManager.Instance.SongPosition >= noteSpawner.GameEndTime)
         {
             OnSongFinished();
-        }
-
-        if (noteSpawner.AllNotesSpawned && !TimingManager.Instance.musicSource.isPlaying)
-        {
-            // 我们需要一个额外的检查，确保不是在游戏刚开始音乐还没播放时就触发
-            // 检查 SongPosition 是否大于0，可以作为一个简单的启动判断
-            if (TimingManager.Instance.SongPosition > 0)
-            {
-                Debug.LogWarning("音乐提前结束，但所有音符已生成。强制判定为游戏成功。");
-                OnSongFinished();
-                return;
-
-            }
         }
     }
 
@@ -110,9 +116,6 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 当玩家血量耗尽时，由 StatsManager 的 OnGameOver 事件调用 (失败路径)
-    /// </summary>
     private void HandleGameOver()
     {
         if (isGameOver) return;
@@ -136,9 +139,6 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 当 Update 检测到游戏成功完成时调用 (成功路径)
-    /// </summary>
     public void OnSongFinished()
     {
         if (isGameOver) return;

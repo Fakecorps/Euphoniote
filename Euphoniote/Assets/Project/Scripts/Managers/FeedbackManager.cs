@@ -1,8 +1,7 @@
-// _Project/Scripts/Managers/FeedbackManager.cs (最终版 - 世界空间特效)
+// _Project/Scripts/Managers/FeedbackManager.cs (最终版 - 通过GameManager获取引用)
 
 using UnityEngine;
 using System.Collections;
-using System.Collections.Generic;
 
 public class FeedbackManager : MonoBehaviour
 {
@@ -15,12 +14,7 @@ public class FeedbackManager : MonoBehaviour
     public Transform HaloTransform2;
 
     [Header("技能触发特效")]
-    [Tooltip("在Inspector中直接拖入技能特效的 Prefab")]
-    public GameObject skillEffectPrefab; // 直接引用世界空间的 Prefab
-
-    [Header("特效生成位置")]
-    [Tooltip("技能特效生成的世界坐标参考点 (例如，场景中心的一个空对象)")]
-    public Transform skillEffectSpawnPoint;
+    public GameObject skillEffectPrefab;
 
     void Awake()
     {
@@ -37,15 +31,8 @@ public class FeedbackManager : MonoBehaviour
 
     private void OnDisable()
     {
-        if (JudgmentManager.Instance != null)
-        {
-            JudgmentManager.OnNoteJudged -= HandleNoteJudged;
-        }
-        if (SkillManager.Instance != null)
-
-        {
-            SkillManager.Instance.OnSkillTriggered -= HandleSkillTriggered;
-        }
+        if (JudgmentManager.Instance != null) { JudgmentManager.OnNoteJudged -= HandleNoteJudged; }
+        if (SkillManager.Instance != null) { SkillManager.Instance.OnSkillTriggered -= HandleSkillTriggered; }
     }
 
     private void HandleNoteJudged(JudgmentResult result)
@@ -59,32 +46,57 @@ public class FeedbackManager : MonoBehaviour
 
     private void HandleSkillTriggered()
     {
-        TriggerSkillEffect();
+        SkillData currentSkill = SkillManager.Instance.GetEquippedSkill();
+        if (currentSkill != null && currentSkill.icon != null)
+        {
+            TriggerSkillEffect(currentSkill.icon);
+        }
     }
 
-    // --- 核心修改：技能特效的独立【世界空间】生成与销毁逻辑 ---
-    public void TriggerSkillEffect()
+    public void TriggerSkillEffect(Sprite skillIcon)
     {
-        if (skillEffectPrefab == null || skillEffectSpawnPoint == null)
+        if (skillEffectPrefab == null)
         {
-            Debug.LogWarning("技能特效的 Prefab 或生成点没有在 FeedbackManager 中设置！", this.gameObject);
+            Debug.LogWarning("技能特效的 Prefab 没有在 FeedbackManager 中设置！", this.gameObject);
             return;
         }
 
-        StartCoroutine(PlayAndDestroySkillEffect());
+        // 通过 GameManager 的静态属性获取当前场景的生成点
+        Transform spawnPoint = GameManager.SkillEffectSpawnPoint;
+
+        if (spawnPoint == null)
+        {
+            Debug.LogError("无法生成技能特效：在当前场景的 GameManager 上找不到 skillEffectSpawnPoint 的引用！请在 4_Gameplay 场景中拖拽赋值。", this.gameObject);
+            return;
+        }
+
+        StartCoroutine(PlayAndDestroySkillEffect(skillIcon, spawnPoint));
     }
 
-    private IEnumerator PlayAndDestroySkillEffect()
+    private IEnumerator PlayAndDestroySkillEffect(Sprite skillIcon, Transform spawnPoint)
     {
-        // 1. 【实例化】 直接在指定的世界坐标点创建实例，不设置父对象
-        GameObject effectInstance = Instantiate(skillEffectPrefab, skillEffectSpawnPoint.position, skillEffectSpawnPoint.rotation);
+        GameObject effectInstance = Instantiate(skillEffectPrefab, spawnPoint.position, spawnPoint.rotation);
 
-        // 2. 触发并等待动画
+        // --- 核心修改：将设置图标的操作放在最前面，并增加安全检查 ---
+        // 2. 立即设置图标
+        SkillEffectView effectView = effectInstance.GetComponent<SkillEffectView>();
+        if (effectView != null)
+        {
+            effectView.SetSkillIcon(skillIcon);
+        }
+        else
+        {
+            Debug.LogWarning("技能特效Prefab上缺少 SkillEffectView 脚本！无法设置动态图标。", effectInstance);
+        }
+
+        // 3. 然后再获取 Animator 并播放动画
         Animator animator = effectInstance.GetComponent<Animator>();
         if (animator != null)
         {
+            // 确保动画从头播放
             animator.Play(0, -1, 0f);
 
+            // 等待一帧让所有状态更新完毕
             yield return null;
 
             float animationLength = animator.GetCurrentAnimatorStateInfo(0).length;
@@ -92,27 +104,20 @@ public class FeedbackManager : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning($"技能特效 {skillEffectPrefab.name} 上没有找到 Animator 组件，将只显示0.5秒。", effectInstance);
             yield return new WaitForSeconds(0.5f);
         }
 
-        // 3. 【销毁】 动画播放完毕后，销毁这个实例
-        Destroy(effectInstance);
+        if (effectInstance != null)
+        {
+            Destroy(effectInstance);
+        }
     }
 
-
-    // --- 您原有的光环特效方法保持不变，它们已经是世界空间的了 ---
     public void TriggerHaloEffect1()
     {
-        if (string.IsNullOrEmpty(haloEffectTag1) || HaloTransform1 == null)
-        {
-            Debug.LogWarning("左侧光环特效配置不完整。", this.gameObject);
-            return;
-        }
-
+        if (string.IsNullOrEmpty(haloEffectTag1) || HaloTransform1 == null) return;
         GameObject haloInstance = NotePoolManager.Instance.GetFromPool(haloEffectTag1);
         if (haloInstance == null) return;
-
         Vector3 spawnPosition = HaloTransform1.position;
         spawnPosition.z -= 0.1f;
         haloInstance.transform.position = spawnPosition;
@@ -121,15 +126,9 @@ public class FeedbackManager : MonoBehaviour
 
     public void TriggerHaloEffect2()
     {
-        if (string.IsNullOrEmpty(haloEffectTag2) || HaloTransform2 == null)
-        {
-            Debug.LogWarning("右侧光环特效配置不完整。", this.gameObject);
-            return;
-        }
-
+        if (string.IsNullOrEmpty(haloEffectTag2) || HaloTransform2 == null) return;
         GameObject haloInstance = NotePoolManager.Instance.GetFromPool(haloEffectTag2);
         if (haloInstance == null) return;
-
         Vector3 spawnPosition = HaloTransform2.position;
         spawnPosition.z -= 0.1f;
         haloInstance.transform.position = spawnPosition;

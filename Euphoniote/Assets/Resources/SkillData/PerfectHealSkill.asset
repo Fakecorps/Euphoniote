@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: da4b6d81aa316d14ca0d8e21a7be2628, type: 3}
   m_Name: PerfectHealSkill
   m_EditorClassIdentifier: 
-  skillName: "Perfect\u6CBB\u7597"
-  description: 
-  icon: {fileID: 0}
+  skillName: "\u91CD\u6574\u59FF\u6001"
+  description: "\u6280\u80FD\u97F3\u7B26\u952Egreet\u53CA\u4EE5\u4E0A\u89E6\u53D1\uFF0C\u6280\u80FD\u53D1\u52A8\u540E\uFF0C15\u79D2\u5185\u6BCF\u6B21perfect\u5224\u5B9A\u56DE\u590D2\u8840\u91CF"
+  icon: {fileID: 21300000, guid: 8517d7ecea23d554785bf99e1ac9c325, type: 3}
   effectType: 1
   duration: 15
-  healAmount: 0
+  healAmount: 10

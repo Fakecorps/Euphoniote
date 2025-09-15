@@ -73,7 +73,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 32
-  m_Sprite: {fileID: 21300000, guid: 1fba4eed1a3ec7c478453f8dfcc1cc24, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 8517d7ecea23d554785bf99e1ac9c325, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 1
   m_FlipY: 0
@@ -95,6 +95,7 @@ GameObject:
   - component: {fileID: 660355480686516124}
   - component: {fileID: 9013378504608162554}
   - component: {fileID: 6976784361694842456}
+  - component: {fileID: 1927149497528711529}
   m_Layer: 0
   m_Name: Skill
   m_TagString: Untagged
@@ -191,3 +192,16 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &1927149497528711529
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8570941156418777190}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dcd4c2716899e640ae044ba4d38a28e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  skillIconRenderer: {fileID: 7278801753655384480}

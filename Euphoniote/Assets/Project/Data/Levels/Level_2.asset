@@ -13,6 +13,6 @@ MonoBehaviour:
   m_Name: Level_2
   m_EditorClassIdentifier: 
   storyStart: 
-  storyEnd: 
+  storyEnd: "\u7B2C\u4E09\u5173\u4E0B"
   chartFileName: level2.json
   musicClip: {fileID: 8300000, guid: 8a41a73290d3e854f9b6a7eb12703c64, type: 3}

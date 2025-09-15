@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 95f733cf89bdc1c44926ae2248c0be38, type: 3}
+  m_Name: Level_0
+  m_EditorClassIdentifier: 
+  storyStart: "\u7B2C\u4E00\u5173\u4E0A"
+  storyEnd: 
+  chartFileName: Newb.json
+  musicClip: {fileID: 8300000, guid: 68064cf7c84c4944eb252aa647b65c75, type: 3}

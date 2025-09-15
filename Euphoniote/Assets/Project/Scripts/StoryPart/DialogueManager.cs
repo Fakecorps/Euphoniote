@@ -1,4 +1,4 @@
-// _Project/Scripts/Story/DialogueManager.cs (纯逻辑最终版)
+// _Project/Scripts/Story/DialogueManager.cs (纯逻辑最终版 - 增加空值检查)
 
 using UnityEngine;
 using System.Collections;
@@ -16,7 +16,7 @@ public class DialogueManager : MonoBehaviour
     private bool isWaitingForChoice = false;
     private string currentStoryName;
 
-    private StoryUIView currentView; // <<-- 核心：对当前场景视图的引用
+    private StoryUIView currentView; // 核心：对当前场景视图的引用
 
     public static DialogueManager Instance { get; private set; }
 
@@ -26,7 +26,6 @@ public class DialogueManager : MonoBehaviour
         else Destroy(gameObject);
     }
 
-    // --- 注册/注销视图的方法 ---
     public void RegisterView(StoryUIView view)
     {
         currentView = view;
@@ -41,48 +40,51 @@ public class DialogueManager : MonoBehaviour
 
     void Update()
     {
-        // 只有在有视图且剧情正在播放时才响应
-        if (currentView != null && currentView.storyPanel.activeSelf && !isWaitingForChoice && Input.GetMouseButtonDown(0))
+        // 增加对 currentView 的空值检查，确保只有在剧情场景中才响应输入
+        if (currentView == null || !currentView.storyPanel.activeSelf || isWaitingForChoice || Input.GetMouseButtonDown(0) == false)
         {
-            if (currentView.IsTyping())
-            {
-                currentView.CompleteTyping();
-            }
-            else
-            {
-                ShowNextDialogueLine();
-            }
+            return;
+        }
+
+        if (currentView.IsTyping())
+        {
+            currentView.CompleteTyping();
+        }
+        else
+        {
+            ShowNextDialogueLine();
         }
     }
 
     public void StartStory(string storyName)
     {
+        // 在开始时也做一次检查
         if (currentView == null)
         {
             Debug.LogError("无法开始剧情：没有已注册的 StoryUIView！请确认您在 2_Story 场景中。");
+            // 即使没有视图，也应该调用 EndStory 来推进游戏流程，防止卡死
+            EndStory(storyName);
             return;
         }
 
         currentStoryName = storyName;
         Debug.Log($"开始播放剧情: {storyName}");
 
-        // 加载剧情文件
         string path = Constants.Constants.Story_Path + storyName;
         TextAsset dialogueDataFile = Resources.Load<TextAsset>(path);
+
         if (dialogueDataFile == null)
         {
             Debug.LogError($"在 Resources/{path} 找不到剧情文件!");
-            EndStory();
+            EndStory(storyName); // 找不到文件也应该结束流程
             return;
         }
         dialogueRows = dialogueDataFile.text.Split('\n');
 
-        // 初始化状态
         currentLine = 1;
         dialogueIndex = "0";
         isWaitingForChoice = false;
 
-        // 通过视图重置UI
         currentView.ResetView();
         currentView.SetPanelActive(true);
 
@@ -109,11 +111,22 @@ public class DialogueManager : MonoBehaviour
         EndStory();
     }
 
+    /// <summary>
+    /// 结束当前剧情的播放（带参数，用于跳过时）
+    /// </summary>
+    private void EndStory(string storyName)
+    {
+        Debug.Log($"剧情 '{storyName}' 播放完毕或被跳过。");
+        if (currentView != null) currentView.SetPanelActive(false);
+        OnStoryComplete?.Invoke(storyName);
+    }
+
+    /// <summary>
+    /// 结束当前剧情的播放（无参数，内部使用）
+    /// </summary>
     private void EndStory()
     {
-        Debug.Log($"剧情 '{currentStoryName}' 播放完毕。");
-        if (currentView != null) currentView.SetPanelActive(false);
-        OnStoryComplete?.Invoke(currentStoryName);
+        EndStory(this.currentStoryName);
     }
 
     private void ProcessDialogueLine(string[] cells)
@@ -139,7 +152,7 @@ public class DialogueManager : MonoBehaviour
             string[] cells = dialogueRows[i].Split(',');
             if (cells.Length > 5 && cells[0] == "&")
             {
-                choices.Add(new KeyValuePair<string, string>(cells[4], cells[5])); // Key: 文本, Value: goto ID
+                choices.Add(new KeyValuePair<string, string>(cells[4], cells[5]));
             }
             else
             {
@@ -149,9 +162,6 @@ public class DialogueManager : MonoBehaviour
         currentView.ShowChoices(choices);
     }
 
-    /// <summary>
-    /// 由 StoryUIView 的按钮调用，通知管理器玩家做出了选择
-    /// </summary>
     public void MakeChoice(string nextDialogueIndex)
     {
         isWaitingForChoice = false;

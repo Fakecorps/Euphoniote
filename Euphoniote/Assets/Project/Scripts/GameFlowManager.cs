@@ -1,4 +1,4 @@
-// _Project/Scripts/Managers/GameFlowManager.cs (带跳过剧情功能的简化版)
+// _Project/Scripts/Managers/GameFlowManager.cs (多场景最终版 - 增加失败流程)
 
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -33,22 +33,16 @@ public class GameFlowManager : MonoBehaviour
         DialogueManager.OnStoryComplete -= HandleStoryComplete;
     }
 
-    /// <summary>
-    /// 当玩家在【选关场景】点击一个关卡时调用
-    /// </summary>
     public void SelectLevel(LevelData levelData)
     {
         CurrentLevelData = levelData;
 
-        // --- 核心修改点：检查是否有开始剧情 ---
         if (levelData != null && !string.IsNullOrEmpty(levelData.storyStart))
         {
-            // 如果有剧情，则加载剧情场景
             SceneManager.LoadScene("2_Story");
         }
         else
         {
-            // 如果没有剧情，直接跳到游戏准备界面
             Debug.Log("没有开始剧情，直接跳转到游戏准备界面。");
             SceneManager.LoadScene("3_GameReady");
         }
@@ -60,58 +54,70 @@ public class GameFlowManager : MonoBehaviour
 
         if (storyName == CurrentLevelData.storyStart)
         {
-            // 游戏前剧情结束 -> 加载游戏准备场景
             SceneManager.LoadScene("3_GameReady");
         }
         else if (storyName == CurrentLevelData.storyEnd)
         {
-            // 游戏后剧情结束 -> 加载选关场景
             GoToLevelSelect();
         }
     }
 
-    /// <summary>
-    /// 当玩家在【游戏准备场景】点击“开始”按钮时调用
-    /// </summary>
     public void StartGameplay()
     {
         SceneManager.LoadScene("4_Gameplay");
     }
 
-    /// <summary>
-    /// 当【音游场景】结束时调用
-    /// </summary>
     public void GameplayFinished()
     {
         SceneManager.LoadScene("5_Results");
     }
 
-    /// <summary>
-    /// 当玩家在【结算场景】点击“继续”按钮时调用
-    /// </summary>
     public void ResultsContinue()
     {
-        // --- 核心修改点：检查是否有结束剧情 ---
-        if (CurrentLevelData != null && !string.IsNullOrEmpty(CurrentLevelData.storyEnd))
+        // 根据游戏结果决定流程
+        if (ResultsData.GameWon)
         {
-            // 如果有剧情，则加载剧情场景
-            SceneManager.LoadScene("2_Story");
+            // 如果游戏成功，检查是否有结束剧情
+            if (CurrentLevelData != null && !string.IsNullOrEmpty(CurrentLevelData.storyEnd))
+            {
+                Debug.Log("游戏成功，正在加载游戏后剧情...");
+                SceneManager.LoadScene("2_Story");
+            }
+            else
+            {
+                Debug.Log("游戏成功，但没有配置游戏后剧情，直接返回选关界面。");
+                GoToLevelSelect();
+            }
         }
-        else
+        else // 如果游戏失败
         {
-            // 如果没有剧情，直接跳回选关界面
-            Debug.Log("没有结束剧情，直接返回选关界面。");
+            Debug.Log("游戏失败，直接返回选关界面。");
             GoToLevelSelect();
         }
     }
 
-    /// <summary>
-    /// 返回选关界面的统一方法
-    /// </summary>
     public void GoToLevelSelect()
     {
-        CurrentLevelData = null; // 清理数据
+        CurrentLevelData = null;
+        // 清理一下结算数据，为下一局做准备
+        ResultsData.FinalScore = 0;
         SceneManager.LoadScene("1_LevelSelect");
+    }
+
+    /// <summary>
+    /// 由 StorySceneController 调用，用于跳过空的剧情节点
+    /// </summary>
+    public void SkipStory()
+    {
+        // 根据当前游戏状态判断应该跳过的是哪个剧情
+        if (ResultsData.FinalScore > 0) // 粗略判断刚玩完一局
+        {
+            HandleStoryComplete(CurrentLevelData?.storyEnd);
+        }
+        else
+        {
+            HandleStoryComplete(CurrentLevelData?.storyStart);
+        }
     }
 
     public void ReturnToMainMenu()
